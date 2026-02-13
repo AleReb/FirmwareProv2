@@ -49,7 +49,7 @@ const byte CMD = 0xB4;
 const byte TAIL = 0xAB;
 
 // Firmware version
-String VERSION = "Pro V0.0.24";
+String VERSION = "Pro V0.0.26";
 
 // Global states
 bool rtcOK = false;

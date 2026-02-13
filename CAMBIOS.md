@@ -1,0 +1,27 @@
+# Registro de Cambios - FirmwarePro
+
+## [V0.0.26] - 2026-02-13
+### Mejoras en UI y Lógica de Muestreo
+- **Nuevo Prompt de Confirmación:** Se reemplazó el aviso simple por un cuadro de diálogo claro: "¿CONFIRMAR ACCIÓN? INICIAR/DETENER MUESTREO".
+- **Lógica de Botones en Prompt:** 
+  - **BTN1:** Cancela la acción y vuelve al menú.
+  - **BTN2:** Confirma e inicia/detiene el proceso.
+- **Muestreo Inmediato:** Al confirmar el inicio, se fuerza una ejecución inmediata de guardado en SD y envío HTTP para feedback visual instantáneo (LED/Header).
+- **Depuración:** Se añadieron mensajes por puerto serial para rastrear clics de botones físicamente.
+
+## [V0.0.25] - 2026-02-13
+### Reestructuración de Navegación
+- **Modo FULL en Menú:** Se eliminó el acceso por pulsación larga (Hold) y se añadió como la 5ª opción del Menú Principal.
+- **Salida de Modo FULL:** Ahora se sale del modo bloqueado haciendo clic en el **BTN1 (izquierdo)**, devolviendo al usuario al menú principal.
+- **Hold Desactivado:** Se deshabilitó la función de mantener presionado el botón derecho para evitar saltos accidentales de pantalla.
+
+## [V0.0.24] - 2026-02-13
+### Seguridad de Operación
+- **Implementación de Full Lock:** Bloqueo de navegación de menús mientras el dispositivo está en modo de visualización de datos (Modo FULL).
+- **Control de Muestreo:** Sincronización de BTN2 para alternar inicio/parada tanto en menú como en vista bloqueada.
+
+## [V0.0.23] - 2026-02-13
+### Versión Inicial Fusionada
+- Integración de Backend GPSDebug con UI de Menús HIRI_PR0.
+- Soporte para sensores PMS5003, SHT31, SDS198.
+- Registro en SD y transmisión HTTP concurrente.

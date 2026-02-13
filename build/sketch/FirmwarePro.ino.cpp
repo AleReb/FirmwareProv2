@@ -51,7 +51,7 @@ const byte CMD = 0xB4;
 const byte TAIL = 0xAB;
 
 // Firmware version
-String VERSION = "Pro V0.0.24";
+String VERSION = "Pro V0.0.26";
 
 // Global states
 bool rtcOK = false;
@@ -379,31 +379,31 @@ void syncRtcSmart();
 void processSerialCommand();
 #line 71 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
 void showMessage(const char *msg);
-#line 144 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
+#line 145 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
 static bool uiCanHandleAction();
-#line 160 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
+#line 161 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
 String getClockTime();
-#line 172 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
+#line 173 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
 int calcBatteryPercent(float v);
-#line 182 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
+#line 183 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
 void drawBatteryDynamic(int xPos, int yPos, float v);
-#line 227 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
+#line 228 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
 void drawActivityDot(int x, bool enabled, bool active, bool ok);
-#line 244 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
+#line 245 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
 void drawHeader();
-#line 294 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
+#line 295 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
 void drawFooterCircles(uint8_t cnt, uint8_t sel);
-#line 309 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
+#line 310 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
 void drawSensorValue(uint8_t idx);
-#line 340 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
+#line 341 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
 void drawMenuItemWithIcon(uint8_t depth, uint8_t idx);
-#line 359 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
+#line 360 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
 void drawFullModeView();
-#line 474 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
+#line 475 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
 void handleRestart();
-#line 491 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
+#line 492 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
 void handleConfigWifi();
-#line 714 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
+#line 719 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
 void updateDisplayStateMachine();
 #line 173 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\wifi.ino"
 static String sanitizeForId(const String &s);
@@ -3233,13 +3233,14 @@ void showMessage(const char *msg) {
 }
 
 // Menú Principal
-const char *topItems[] = {"PM2.5", "Temperatura", "Humedad", "Empezar Muestreo",
+const char *topItems[] = {"PM2.5", "Temperatura", "Humedad", "Empezar Muestreo", "MODO FULL",
                           "OPCIONES"};
 const uint16_t topIcons[] = {
     0,      // null
     0,      // null
     0,      // null
     0x01A5, // muestreo
+    0x0185, // modo full (usando icono info/pantalla)
     0x0192  // opciones
 };
 
@@ -3573,16 +3574,16 @@ void renderDisplay() {
   }
 
   if (displayState == DISP_PROMPT) {
-    u8g2.setFont(u8g2_font_6x10_tf);
-    const char* line1 = streaming ? "MUESTREO ACTIVO" : "NO MUESTREANDO";
-    const char* line3 = streaming ? "BTN2: DETENER [OK]" : "BTN2: INICIAR [OK]";
+    u8g2.drawFrame(0, 12, 128, 52);
+    u8g2.setFont(u8g2_font_6x12_tf);
+    const char* l1 = "¿CONFIRMAR ACCION?";
+    const char* l2 = streaming ? "DETENER MUESTREO" : "INICIAR MUESTREO";
+    u8g2.drawStr((128 - u8g2.getStrWidth(l1)) / 2, 28, l1);
+    u8g2.drawStr((128 - u8g2.getStrWidth(l2)) / 2, 42, l2);
     
-    int w1 = u8g2.getStrWidth(line1);
-    int w3 = u8g2.getStrWidth(line3);
-    
-    u8g2.drawStr((128 - w1) / 2, 25, line1);
     u8g2.setFont(u8g2_font_5x7_tf);
-    u8g2.drawStr((128 - w3) / 2, 45, line3);
+    u8g2.drawStr(5, 58, "BTN1: NO");
+    u8g2.drawStr(80, 58, "BTN2: SI");
     
     u8g2.sendBuffer();
     return;
@@ -3660,18 +3661,24 @@ void handleConfigWifi() {
 // Evento BTN1: avanza selección en el menú activo.
 // Reactiva OLED si estaba en ahorro de energía.
 void ui_btn1_click() {
+  Serial.println("[UI] BTN1 Click");
   if (!uiCanHandleAction())
     return;
 
   if (displayState == DISP_PROMPT) {
     displayState = DISP_NORMAL;
-    menuIndex = (menuIndex + 1) % menus[menuDepth].count; // Saltar al siguiente item (Opciones)
+    showMessage("CANCELADO");
     renderDisplay();
     return;
   }
 
   if (uiFullMode) {
-    // Modo FULL lock: BTN1 no hace nada (solo BTN2 toggle o BTN2 Hold salir)
+    // En modo FULL, BTN1 click ahora sirve para SALIR al menú principal
+    uiFullMode = false;
+    menuDepth = 0;
+    menuIndex = 4; // Quedar en el item "MODO FULL"
+    showMessage("MODO MENU");
+    renderDisplay();
     return;
   }
 
@@ -3686,6 +3693,7 @@ void ui_btn1_click() {
 // Evento BTN2 corto: entra/selecciona opciones del menú.
 // Controla navegación entre niveles y acciones no críticas.
 void ui_btn2_click() {
+  Serial.println("[UI] BTN2 Click");
   if (displayState == DISP_PROMPT) {
     // Perform Toggle
     if (streaming) {
@@ -3696,8 +3704,10 @@ void ui_btn2_click() {
       prefs.putBool("streaming", false);
       prefs.end();
       showMessage("DETENIDO");
+      Serial.println("[UI] Sampling STOPPED");
     } else {
       // START
+      Serial.println("[UI] Starting sampling...");
       streaming = true;
       if (!SDOK) {
         spiSD.begin(SD_SCLK, SD_MISO, SD_MOSI, SD_CS);
@@ -3709,12 +3719,21 @@ void ui_btn2_click() {
         prefs.begin("system", false);
         prefs.putString("csvFile", csvFileName);
         prefs.end();
+        Serial.println("[UI] SD OK, logging enabled");
       }
       loggingEnabled = SDOK;
       prefs.begin("system", false);
       prefs.putBool("streaming", true);
       prefs.end();
+      
+      // Force immediate execution in loop
+      extern uint32_t lastHttpSend;
+      extern uint32_t lastSdSave;
+      lastHttpSend = 0; 
+      lastSdSave = 0;
+      
       showMessage("INICIADO");
+      Serial.println("[UI] Sampling STARTED");
     }
     displayState = DISP_NORMAL;
     renderDisplay();
@@ -3765,7 +3784,11 @@ void ui_btn2_click() {
     // Main Menu
     if (menuIndex == 3) { // Empezar Muestreo (PROMPT)
       displayState = DISP_PROMPT;
-    } else if (menuIndex == 4) { // Opciones
+    } else if (menuIndex == 4) { // Entrar a MODO FULL
+      uiFullMode = true;
+      displayState = DISP_NORMAL;
+      showMessage("MODO FULL");
+    } else if (menuIndex == 5) { // Opciones
       menuDepth = 1;
       menuIndex = 0;
     }
@@ -3839,31 +3862,13 @@ void ui_btn2_click() {
   renderDisplay();
 }
 
-// BTN2 Hold: alterna modo FULL <-> menú normal.
+// BTN2 Hold: deshabilitado por solicitud del usuario
 void ui_btn2_hold() {
   if (!uiCanHandleAction())
     return;
 
-  uiFullMode = !uiFullMode;
-  
-  // Full Lock: reset menu state when toggling FULL mode
-  menuDepth = 0;
-  menuIndex = 0;
-  displayState = DISP_NORMAL;
-
-  lastOledActivity = millis();
-  if (config.oledAutoOff)
-    u8g2.setPowerSave(0);
-
-  if (uiFullMode) {
-    showMessage("MODO FULL");
-    Serial.println("[UI] Full mode ON (Menu Locked)");
-  } else {
-    showMessage("MODO MENU");
-    Serial.println("[UI] Full mode OFF (Menu Unlocked)");
-  }
-
-  renderDisplay();
+  // Acción de hold desactivada para evitar conflictos con navegación
+  Serial.println("[UI] BTN2 Hold ignorado");
 }
 
 // Placeholder de máquina de estados UI para futuras extensiones.
