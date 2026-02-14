@@ -27,7 +27,7 @@ void writeCSVHeader() {
     if (f.size() == 0) { // Only write header if file is empty
       f.println("ts_ms,time,gpsDate,lat,lon,alt,spd_kmh,pm1,pm25,pm10,pmsTempC,"
                 "pmsHum,rtcTempC,batV,csq,sats,hdop,xtra_ok,sht31TempC,"
-                "sht31Hum,resetReason,pm100");
+                "sht31Hum,resetReason,pm100,notas");
       Serial.println("[SD] Wrote header to " + csvFileName);
     }
     f.close();
@@ -56,6 +56,8 @@ void writeErrorLogHeader() {
 // Variable global para almacenar la última línea guardada (para visualización
 // en OLED)
 extern String lastSavedCSVLine;
+
+extern String currentNote;
 
 // Guarda una muestra completa de telemetría en SD y rota por cambio de día.
 // Actualiza contadores y expone última línea guardada para UI/debug.
@@ -92,7 +94,8 @@ bool saveCSVData() {
                 String(rtcTempC, 2) + "," + String(batV, 2) + "," +
                 String(csq) + "," + satellitesStr + "," + hdopStr + "," +
                 (xtraLastOk ? "1" : "0") + "," + sht31Temp + "," +
-                sht31Humidity + "," + rebootReason + "," + String(SDS198PM100);
+                sht31Humidity + "," + rebootReason + "," + String(SDS198PM100) +
+                "," + currentNote;
 
   File f = SD.open(csvFileName, FILE_APPEND);
   if (f) {
@@ -101,6 +104,10 @@ bool saveCSVData() {
     sdSaveCounter++;         // Incrementar contador de guardados exitosos en SD
     lastSavedCSVLine = line; // Guardar línea para visualización en OLED
     Serial.println(String("[SD] Saved line: ") + line);
+    
+    // Clear one-shot note after writing
+    currentNote = ""; 
+    
     return true;
   } else {
     Serial.println("[SD][ERR] Failed to open " + csvFileName +

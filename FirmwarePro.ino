@@ -49,7 +49,7 @@ const byte CMD = 0xB4;
 const byte TAIL = 0xAB;
 
 // Firmware version
-String VERSION = "Pro V0.0.32";
+String VERSION = "Pro V0.0.33";
 
 // Global states
 bool rtcOK = false;
@@ -112,6 +112,7 @@ bool streaming = false;
 String csvFileName = "";
 String logFilePath = "";
 String failedTxPath = "";
+String currentNote = ""; // Global note for one-shot logging
 // Variables moved to main for centralization
 String lastSavedCSVLine = ""; // Used in sd_card.ino for OLED display
 File uploadFile;              // Used in wifi.ino for file uploads

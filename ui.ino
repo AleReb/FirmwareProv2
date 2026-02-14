@@ -40,6 +40,9 @@ extern bool streaming;
 extern bool haveFix;
 extern String gpsStatus;
 extern float batV;
+extern String gpsLat;
+extern String gpsLon;
+extern String gpsSpeedKmh;
 extern uint32_t lastHttpActivityMs;
 extern uint32_t lastSdActivityMs;
 extern bool lastHttpOk;
@@ -55,6 +58,7 @@ extern volatile uint32_t displayStateStartTime;
 extern uint32_t lastOledActivity;
 extern String csvFileName;
 extern String VERSION;
+extern String currentNote;
 // writeCSVHeader etc moved up or kept if needed.
 
 // -------------------- Helper Logic --------------------
@@ -130,14 +134,13 @@ void showMessage(const char *msg) {
 }
 
 // Menú Principal
-const char *topItems[] = {"PM2.5", "Temperatura", "Humedad", "Empezar Muestreo", "MODO FULL",
+const char *topItems[] = {"PM2.5", "Temperatura", "Humedad", "Empezar Muestreo",
                           "OPCIONES"};
 const uint16_t topIcons[] = {
     0,      // null
     0,      // null
     0,      // null
     0x01A5, // muestreo
-    0x0185, // modo full (usando icono info/pantalla)
     0x0192  // opciones
 };
 
@@ -151,11 +154,12 @@ const uint16_t SubIcons[] = {
 };
 
 // Menú de “Mensajes”
-const char *msgItems[] = {"Camion", "Humo", "Construccion", "Volver"};
+const char *msgItems[] = {"Camion", "Humo", "Construccion", "Otros", "Volver"};
 const uint16_t msgIcons[] = {
     0x2A1, // 🚚 Camión
     0x26C, // 💨 Humo
     0x09E, // 🏗️ Construcción
+    0x00A0, // Otros (ícono genérico)
     0x01A9 // ←   Volver
 };
 
@@ -170,13 +174,14 @@ const uint16_t cfgIcons[] = {
 
 // Menú de “Información”
 // Menú de “Información”
-const char *infoItems[] = {"Version", "Bateria", "Memoria", "Redes", "Guardado", "Volver"};
+const char *infoItems[] = {"Version", "ACC. WIFI SD", "GPS", "Redes", "Guardado", "MODO FULL", "Volver"};
 const uint16_t infoIcons[] = {
     0x0085, // version
-    0x00DB, // batería
-    0x0093, // memoria
+    0x0093, // memoria (usado para wifi sd)
+    0x01A5, // GPS (ícono de muestreo)
     0x01CC, // redes
     0x0176, // guardado
+    0x0185, // modo full
     0x01A9  // volver
 };
 
@@ -510,6 +515,15 @@ void renderDisplay() {
     drawStorageInfo();
     return;
   }
+  if (displayState == DISP_GPS) {
+    if (millis() - displayStateStartTime > 10000) {
+      displayState = DISP_NORMAL;
+      renderDisplay();
+      return;
+    }
+    drawGpsInfo();
+    return;
+  }
 
   // FULL mode (sin menú)
   if (uiFullMode) {
@@ -625,6 +639,22 @@ void drawStorageInfo() {
   u8g2.sendBuffer();
 }
 
+void drawGpsInfo() {
+  u8g2.clearBuffer();
+  drawHeader();
+  u8g2.setFont(u8g2_font_6x10_tf);
+  
+  u8g2.drawStr(0, 20, "ESTADO GPS:");
+  u8g2.drawStr(70, 20, (haveFix && gpsStatus == "Fix") ? "FIX OK" : "NO FIX");
+  
+  u8g2.setFont(u8g2_font_5x7_tf);
+  u8g2.drawStr(0, 32, ("Lat: " + gpsLat).c_str());
+  u8g2.drawStr(0, 42, ("Lon: " + gpsLon).c_str());
+  u8g2.drawStr(0, 52, ("Vel: " + gpsSpeedKmh + " km/h").c_str());
+  
+  u8g2.sendBuffer();
+}
+
 
 // --- Action Handlers ---
 
@@ -712,7 +742,7 @@ void ui_btn2_click() {
     // En modo FULL, BTN2 click ahora SALE al menú principal
     uiFullMode = false;
     menuDepth = 0;
-    menuIndex = 4; // Quedar en el item "MODO FULL"
+    menuIndex = 0; // Volver al inicio
     showMessage("MODO MENU");
     renderDisplay();
     return;
@@ -746,11 +776,7 @@ void ui_btn2_click() {
     // Main Menu
     if (menuIndex == 3) { // Empezar Muestreo (PROMPT)
       displayState = DISP_PROMPT;
-    } else if (menuIndex == 4) { // Entrar a MODO FULL
-      uiFullMode = true;
-      displayState = DISP_NORMAL;
-      showMessage("MODO FULL");
-    } else if (menuIndex == 5) { // Opciones
+    } else if (menuIndex == 4) { // Opciones
       menuDepth = 1;
       menuIndex = 0;
     }
@@ -772,15 +798,22 @@ void ui_btn2_click() {
   } else if (menuDepth == 2) {
     // Mensajes: Mostrar feedback NO BLOQUEANTE y mantenerse
     if (menuIndex == 0) {
-      showMessage("Funcion Camion");
+      currentNote = "Camion";
+      showMessage("Nota: Camion");
       Serial.println("[UI] Accion: Camion");
     } else if (menuIndex == 1) {
-      showMessage("Funcion Humo");
+      currentNote = "Humo";
+      showMessage("Nota: Humo");
       Serial.println("[UI] Accion: Humo");
     } else if (menuIndex == 2) {
-      showMessage("CONSTRUCCION");
+      currentNote = "Construccion";
+      showMessage("Nota: Construccion");
       Serial.println("[UI] Accion: Construccion");
-    } else if (menuIndex == 3) { // Volver
+    } else if (menuIndex == 3) { // Otros
+      currentNote = "Otros";
+      showMessage("Nota: Otros");
+      Serial.println("[UI] Accion: Otros");
+    } else if (menuIndex == 4) { // Volver
       menuDepth = 1;
       menuIndex = 0;
     }
@@ -798,20 +831,22 @@ void ui_btn2_click() {
     // Información
     if (menuIndex == 0) { // Version
       showMessage(VERSION.c_str());
-    } else if (menuIndex == 1) { // Bateria
-      String batStr =
-          String(batV, 2) + "V (" + String(calcBatteryPercent(batV)) + "%)";
-      showMessage(batStr.c_str());
-    } else if (menuIndex == 2) { // Memoria
-      String memStr = "Free: " + String(ESP.getFreeHeap() / 1024) + "KB";
-      showMessage(memStr.c_str());
+    } else if (menuIndex == 1) { // ACC. WIFI SD
+      handleConfigWifi();
+    } else if (menuIndex == 2) { // GPS
+      displayState = DISP_GPS;
+      displayStateStartTime = millis();
     } else if (menuIndex == 3) { // Redes
       displayState = DISP_NETWORK;
       displayStateStartTime = millis();
     } else if (menuIndex == 4) { // Guardado
       displayState = DISP_STORAGE;
       displayStateStartTime = millis();
-    } else if (menuIndex == 5) { // Volver
+    } else if (menuIndex == 5) { // MODO FULL
+      uiFullMode = true;
+      displayState = DISP_NORMAL;
+      showMessage("MODO FULL");
+    } else if (menuIndex == 6) { // Volver
       menuDepth = 1;
       menuIndex = 0;
     }
