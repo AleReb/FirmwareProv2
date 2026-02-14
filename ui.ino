@@ -160,21 +160,23 @@ const uint16_t msgIcons[] = {
 };
 
 // Menú de “Configuración”
-const char *cfgItems[] = {"REDES", "GUARDADO", "RTC", "Reiniciar", "Volver"};
+// Menú de “Configuración”
+const char *cfgItems[] = {"RTC", "Reiniciar", "Volver"};
 const uint16_t cfgIcons[] = {
-    0x01CC, // redes
-    0x0176, // guardado
     0x01CB, // rtc/función
     0x00D5, // reiniciar
     0x01A9  // volver
 };
 
 // Menú de “Información”
-const char *infoItems[] = {"Version", "Bateria", "Memoria", "Volver"};
+// Menú de “Información”
+const char *infoItems[] = {"Version", "Bateria", "Memoria", "Redes", "Guardado", "Volver"};
 const uint16_t infoIcons[] = {
     0x0085, // version
-    0x00DB, // batería (cambiado de 0x00D1 a 0x00DB para streamline)
+    0x00DB, // batería
     0x0093, // memoria
+    0x01CC, // redes
+    0x0176, // guardado
     0x01A9  // volver
 };
 
@@ -784,32 +786,32 @@ void ui_btn2_click() {
     }
   } else if (menuDepth == 3) {
     // Configuration Menu
-    if (menuIndex == 0) { // REDES
-      displayState = DISP_NETWORK;
-      displayStateStartTime = millis(); // Start timeout timer
-    } else if (menuIndex == 1) { // GUARDADO
-      displayState = DISP_STORAGE;
-      displayStateStartTime = millis(); // Start timeout timer
-    } else if (menuIndex == 2) { // RTC
+    if (menuIndex == 0) { // RTC
       displayState = DISP_RTC;
-    } else if (menuIndex == 3) { // Reiniciar
+    } else if (menuIndex == 1) { // Reiniciar
       handleRestart();
-    } else if (menuIndex == 4) { // Volver
+    } else if (menuIndex == 2) { // Volver
       menuDepth = 1;
       menuIndex = 0;
     }
   } else if (menuDepth == 4) {
     // Información
-    if (menuIndex == 0) {
+    if (menuIndex == 0) { // Version
       showMessage(VERSION.c_str());
-    } else if (menuIndex == 1) {
+    } else if (menuIndex == 1) { // Bateria
       String batStr =
           String(batV, 2) + "V (" + String(calcBatteryPercent(batV)) + "%)";
       showMessage(batStr.c_str());
-    } else if (menuIndex == 2) {
+    } else if (menuIndex == 2) { // Memoria
       String memStr = "Free: " + String(ESP.getFreeHeap() / 1024) + "KB";
       showMessage(memStr.c_str());
-    } else if (menuIndex == 3) { // Volver
+    } else if (menuIndex == 3) { // Redes
+      displayState = DISP_NETWORK;
+      displayStateStartTime = millis();
+    } else if (menuIndex == 4) { // Guardado
+      displayState = DISP_STORAGE;
+      displayStateStartTime = millis();
+    } else if (menuIndex == 5) { // Volver
       menuDepth = 1;
       menuIndex = 0;
     }
