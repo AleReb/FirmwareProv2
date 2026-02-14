@@ -95,6 +95,12 @@ void processSerialCommand() {
     Serial.println(F("  start       - Start streaming"));
     Serial.println(F("  stop        - Stop streaming"));
 
+    Serial.println(F("\n[UI / OLED Flow]"));
+    Serial.println(F("  BTN1: navegar / cancelar prompt"));
+    Serial.println(F("  BTN2: seleccionar / confirmar prompt"));
+    Serial.println(F("  Menu Mensajes -> guarda nota one-shot en CSV (columna notas)"));
+    Serial.println(F("  Informacion > WIFI SD (ON/OFF): BTN2 entra/sale AP"));
+
     Serial.println(F("\n[Configuration]"));
     Serial.println(F("  config              - Show all configuration"));
     Serial.println(F("  config sd/http/display/power - Show specific config"));

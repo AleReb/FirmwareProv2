@@ -134,7 +134,7 @@ void showMessage(const char *msg) {
 }
 
 // Menú Principal
-const char *topItems[] = {"PM2.5", "Temperatura", "Humedad", "Empezar Muestreo",
+const char *topItems[] = {"PM2.5", "TEMPERATURA", "HUMEDAD", "EMPEZAR MUESTREO",
                           "OPCIONES"};
 const uint16_t topIcons[] = {
     0,      // null
@@ -145,7 +145,7 @@ const uint16_t topIcons[] = {
 };
 
 // Submenu: Opciones
-const char *SubItems[] = {"Mensajes", "Configuracion", "Informacion", "Volver"};
+const char *SubItems[] = {"MENSAJES", "CONFIGURACION", "INFORMACION", "VOLVER"};
 const uint16_t SubIcons[] = {
     0x00EC, // mensajes
     0x015b, // configuración
@@ -154,7 +154,7 @@ const uint16_t SubIcons[] = {
 };
 
 // Menú de “Mensajes”
-const char *msgItems[] = {"Camion", "Humo", "Construccion", "Otros", "Volver"};
+const char *msgItems[] = {"CAMION", "HUMO", "CONSTRUCCION", "OTROS", "VOLVER"};
 const uint16_t msgIcons[] = {
     0x2A1, // 🚚 Camión
     0x26C, // 💨 Humo
@@ -165,7 +165,7 @@ const uint16_t msgIcons[] = {
 
 // Menú de “Configuración”
 // Menú de “Configuración”
-const char *cfgItems[] = {"RTC", "Reiniciar", "Volver"};
+const char *cfgItems[] = {"RTC", "REINICIAR", "VOLVER"};
 const uint16_t cfgIcons[] = {
     0x01CB, // rtc/función
     0x00D5, // reiniciar
@@ -174,7 +174,7 @@ const uint16_t cfgIcons[] = {
 
 // Menú de “Información”
 // Menú de “Información”
-const char *infoItems[] = {"Version", "ACC. WIFI SD", "GPS", "Redes", "Guardado", "MODO FULL", "Volver"};
+const char *infoItems[] = {"VERSION", "WIFI SD (ON/OFF)", "GPS", "REDES", "GUARDADO", "MODO FULL", "VOLVER"};
 const uint16_t infoIcons[] = {
     0x0085, // version
     0x0093, // memoria (usado para wifi sd)
@@ -540,7 +540,7 @@ void renderDisplay() {
       drawSensorValue(menuIndex);
     } else {
       // Items 3+ (Infos, Opciones)
-      const char *txt = (menuIndex == 3) ? (streaming ? "Detener Muestreo" : "Empezar Muestreo") : menus[0].items[menuIndex];
+      const char *txt = (menuIndex == 3) ? (streaming ? "DETENER MUESTREO" : "EMPEZAR MUESTREO") : menus[0].items[menuIndex];
       u8g2.setFont(u8g2_font_6x12_tf);
       int tw = u8g2.getStrWidth(txt);
       u8g2.drawStr((128 - tw) / 2, 53, txt);
