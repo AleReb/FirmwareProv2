@@ -84,3 +84,38 @@ void logError(const String &type, const String &ctx, const String &msg) {
     f.close();
   }
 }
+
+// -------------------- HELPER FUNCTIONS FOR UI INFO SCREENS --------------------
+
+// SyncRtcFromModem is in rtc.ino
+// bool syncRtcFromModem() { ... }
+
+// Get Network Time String for Display
+String getNetworkTime() {
+  String resp;
+  if (sendAtSync("+CCLK?", resp, 2000)) {
+    int idx = resp.indexOf("+CCLK: \"");
+    if (idx >= 0) {
+       // Return "hh:mm:ss dd/mm"
+       // Correction: +CCLK: "23/05/12,14:20:00+00"
+       String raw = resp.substring(idx + 8, idx + 25);
+       // raw: yy/mm/dd,hh:mm:ss
+       String timeS = raw.substring(9, 17); // hh:mm:ss
+       String dateS = raw.substring(6, 8) + "/" + raw.substring(3, 5); // dd/mm
+       return timeS + " " + dateS;
+    }
+  }
+  return "--:--:-- --/--";
+}
+
+// Get Current CSV File Size
+uint32_t getCsvFileSize() {
+  if (!SDOK || csvFileName.length() == 0) return 0;
+  if (!SD.exists(csvFileName)) return 0;
+  
+  File f = SD.open(csvFileName, FILE_READ);
+  if (!f) return 0;
+  uint32_t s = f.size();
+  f.close();
+  return s;
+}

@@ -61,7 +61,15 @@ struct SystemConfig {
 };
 
 // -------------------- Display State Machine --------------------
-enum DisplayState { DISP_NORMAL, DISP_SD_SAVED, DISP_MESSAGE, DISP_PROMPT };
+enum DisplayState {
+  DISP_NORMAL,
+  DISP_SD_SAVED,
+  DISP_MESSAGE,
+  DISP_PROMPT,
+  DISP_NETWORK,
+  DISP_RTC,
+  DISP_STORAGE
+};
 #define DISP_MSG_DURATION_MS 1500
 
 #endif

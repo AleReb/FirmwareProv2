@@ -51,7 +51,7 @@ const byte CMD = 0xB4;
 const byte TAIL = 0xAB;
 
 // Firmware version
-String VERSION = "Pro V0.0.26";
+String VERSION = "Pro V0.0.32";
 
 // Global states
 bool rtcOK = false;
@@ -76,19 +76,19 @@ WebServer server(80); // Used in wifi.ino
 SoftwareSerial pms(pms_TX, pms_RX);
 
 // Button flags (edge + debounce)
-bool btn1PressedFlag = false;
-bool btn2PressedFlag = false;
-bool btn1ClickFlag = false;
-bool btn2ClickFlag = false;
-bool btn2HoldFlag = false;
-bool btn2LongFired = false;
-uint32_t btn1PressStartMs = 0;
-uint32_t btn2PressStartMs = 0;
-uint32_t btn1LastEdgeMs = 0;
-uint32_t btn2LastEdgeMs = 0;
-const uint32_t BTN_DEBOUNCE_MS = 35;
-const uint32_t BTN_MIN_CLICK_MS = 25;
-const uint32_t BTN2_LONG_MS = 700;
+// Button flags (edge + debounce)
+volatile bool btn1ClickFlag = false;
+volatile bool btn2ClickFlag = false;
+volatile bool btn2HoldFlag = false;
+
+// Internal Flags for ISR State tracking
+// (Removed complex hold state tracking)
+
+// Debounce Tracking
+volatile uint32_t lastDebounceTime1 = 0;
+volatile uint32_t lastDebounceTime2 = 0;
+const uint32_t BTN1_DEBOUNCE_MS = 200; // Increased for Button 1 stability
+const uint32_t BTN2_DEBOUNCE_MS = 200;  // Increased for Button 2 stability (was 50)
 
 // Data Variables
 uint16_t PM1 = 0, PM25 = 0, PM10 = 0;
@@ -306,24 +306,26 @@ void downloadXtraIfDue();
 void parseNMEA(const String &line);
 void saveFailedTransmission(const String &url, const String &errorType);
 bool sendCurrentMeasurement();
-void pollButtonFlags();
-void dispatchButtonFlags();
+void handleButtonLogic(); // Renamed from dispatchButtonFlags
+
+// ISR Function Prototypes
+void IRAM_ATTR isr_btn1();
+void IRAM_ATTR isr_btn2();
 
 // UI Event Handlers
 extern void ui_btn1_click();
 extern void ui_btn2_click();
-extern void ui_btn2_hold();
 
 // Oled Status Helper (used by wifi/main)
 // Renderiza un estado rápido en OLED con hasta 4 líneas de texto.
 // Se usa para feedback de arranque, red, módem y operaciones críticas.
-#line 336 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\FirmwarePro.ino"
+#line 338 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\FirmwarePro.ino"
 void atBegin(const String &cmd, const String &expect1, const String &expect2, uint32_t timeout_ms);
-#line 419 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\FirmwarePro.ino"
+#line 421 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\FirmwarePro.ino"
 void updateNetworkInfo();
-#line 576 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\FirmwarePro.ino"
+#line 564 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\FirmwarePro.ino"
 void setup();
-#line 768 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\FirmwarePro.ino"
+#line 754 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\FirmwarePro.ino"
 void loop();
 #line 42 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\gps.ino"
 void splitSentence(const String &sentence, char delimiter, String fields[], int expectedFields);
@@ -377,33 +379,41 @@ static bool getModemEpoch(uint32_t &epoch_out);
 void syncRtcSmart();
 #line 50 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\serial_commands.ino"
 void processSerialCommand();
-#line 71 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
+#line 63 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
+void toggleSamplingAction();
+#line 125 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
 void showMessage(const char *msg);
-#line 145 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
+#line 199 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
 static bool uiCanHandleAction();
-#line 161 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
+#line 215 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
 String getClockTime();
-#line 173 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
+#line 227 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
 int calcBatteryPercent(float v);
-#line 183 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
+#line 237 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
 void drawBatteryDynamic(int xPos, int yPos, float v);
-#line 228 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
+#line 282 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
 void drawActivityDot(int x, bool enabled, bool active, bool ok);
-#line 245 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
+#line 299 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
 void drawHeader();
-#line 295 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
+#line 349 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
 void drawFooterCircles(uint8_t cnt, uint8_t sel);
-#line 310 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
+#line 364 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
 void drawSensorValue(uint8_t idx);
-#line 341 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
+#line 395 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
 void drawMenuItemWithIcon(uint8_t depth, uint8_t idx);
-#line 360 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
+#line 414 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
 void drawFullModeView();
-#line 475 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
+#line 551 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
+void drawNetworkInfo();
+#line 576 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
+void drawRtcInfo();
+#line 603 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
+void drawStorageInfo();
+#line 631 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
 void handleRestart();
-#line 492 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
+#line 648 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
 void handleConfigWifi();
-#line 719 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
+#line 835 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
 void updateDisplayStateMachine();
 #line 173 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\wifi.ino"
 static String sanitizeForId(const String &s);
@@ -425,7 +435,7 @@ void handleIp();
 void handleSsid();
 #line 318 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\wifi.ino"
 void setupWifiRoutes();
-#line 318 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\FirmwarePro.ino"
+#line 320 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\FirmwarePro.ino"
 void oledStatus(const String &l1, const String &l2 = "", const String &l3 = "",
                 const String &l4 = "") {
   u8g2.clearBuffer();
@@ -630,47 +640,33 @@ bool sendCurrentMeasurement() {
 
 // Poll de botones por flags con debounce por software.
 // BTN activo en LOW (INPUT_PULLUP): al soltar genera click flag.
-void pollButtonFlags() {
+// -------------------- INTERRUPT SERVICE ROUTINES --------------------
+
+// Button 1: Simply trigger Click on FALLING edge (Press)
+// This makes it feel instant. Debounce ensures single trigger.
+void IRAM_ATTR isr_btn1() {
   uint32_t now = millis();
-
-  bool b1Pressed = (digitalRead(BUTTON_PIN_1) == LOW);
-  if (b1Pressed != btn1PressedFlag && (now - btn1LastEdgeMs) >= BTN_DEBOUNCE_MS) {
-    btn1LastEdgeMs = now;
-    btn1PressedFlag = b1Pressed;
-    if (b1Pressed) {
-      btn1PressStartMs = now;
-    } else if ((now - btn1PressStartMs) >= BTN_MIN_CLICK_MS) {
-      btn1ClickFlag = true;
-    }
-  }
-
-  bool b2Pressed = (digitalRead(BUTTON_PIN_2) == LOW);
-  if (b2Pressed != btn2PressedFlag && (now - btn2LastEdgeMs) >= BTN_DEBOUNCE_MS) {
-    btn2LastEdgeMs = now;
-    btn2PressedFlag = b2Pressed;
-    if (b2Pressed) {
-      btn2PressStartMs = now;
-      btn2LongFired = false;
-    } else {
-      if (!btn2LongFired && (now - btn2PressStartMs) >= BTN_MIN_CLICK_MS) {
-        btn2ClickFlag = true;
-      }
-      btn2LongFired = false;
-    }
-  }
-
-  if (btn2PressedFlag && !btn2LongFired && (now - btn2PressStartMs) >= BTN2_LONG_MS) {
-    btn2HoldFlag = true;
-    btn2LongFired = true;
+  if (now - lastDebounceTime1 > BTN1_DEBOUNCE_MS) {
+    lastDebounceTime1 = now;
+    btn1ClickFlag = true;
   }
 }
 
-// Ejecuta handlers UI una sola vez por flag levantado.
-void dispatchButtonFlags() {
-  if (btn2HoldFlag) {
-    btn2HoldFlag = false;
-    ui_btn2_hold();
+// Button 2: Simple Click (FALLING)
+// Logic simplified: No more Hold detection. Just Click.
+void IRAM_ATTR isr_btn2() {
+  uint32_t now = millis();
+  
+  // Debounce check
+  if (now - lastDebounceTime2 > BTN2_DEBOUNCE_MS) {
+    lastDebounceTime2 = now;
+    btn2ClickFlag = true;
   }
+}
+
+// Checks logic (Simplified)
+void handleButtonLogic() {
+  // Dispatch Actions
   if (btn1ClickFlag) {
     btn1ClickFlag = false;
     ui_btn1_click();
@@ -771,13 +767,11 @@ void setup() {
   u8g2.sendBuffer();
   delay(1000);
 
-  // BUTTONS (flags + polling)
+  // BUTTONS (Interrupts)
   pinMode(BUTTON_PIN_1, INPUT_PULLUP);
   pinMode(BUTTON_PIN_2, INPUT_PULLUP);
-  btn1PressedFlag = (digitalRead(BUTTON_PIN_1) == LOW);
-  btn2PressedFlag = (digitalRead(BUTTON_PIN_2) == LOW);
-  btn1LastEdgeMs = millis();
-  btn2LastEdgeMs = millis();
+  attachInterrupt(digitalPinToInterrupt(BUTTON_PIN_1), isr_btn1, FALLING);
+  attachInterrupt(digitalPinToInterrupt(BUTTON_PIN_2), isr_btn2, FALLING);
 
   // MODEM
   SerialAT.begin(115200, SERIAL_8N1, MODEM_RX, MODEM_TX);
@@ -880,8 +874,8 @@ void loop() {
   esp_task_wdt_reset();
 
   // Button flags
-  pollButtonFlags();
-  dispatchButtonFlags();
+  // Button Logic (State Check & Dispatch)
+  handleButtonLogic();
 
   if (wifiModeActive) {
     server.handleClient();
@@ -1881,6 +1875,41 @@ void logError(const String &type, const String &ctx, const String &msg) {
     f.println(msg);
     f.close();
   }
+}
+
+// -------------------- HELPER FUNCTIONS FOR UI INFO SCREENS --------------------
+
+// SyncRtcFromModem is in rtc.ino
+// bool syncRtcFromModem() { ... }
+
+// Get Network Time String for Display
+String getNetworkTime() {
+  String resp;
+  if (sendAtSync("+CCLK?", resp, 2000)) {
+    int idx = resp.indexOf("+CCLK: \"");
+    if (idx >= 0) {
+       // Return "hh:mm:ss dd/mm"
+       // Correction: +CCLK: "23/05/12,14:20:00+00"
+       String raw = resp.substring(idx + 8, idx + 25);
+       // raw: yy/mm/dd,hh:mm:ss
+       String timeS = raw.substring(9, 17); // hh:mm:ss
+       String dateS = raw.substring(6, 8) + "/" + raw.substring(3, 5); // dd/mm
+       return timeS + " " + dateS;
+    }
+  }
+  return "--:--:-- --/--";
+}
+
+// Get Current CSV File Size
+uint32_t getCsvFileSize() {
+  if (!SDOK || csvFileName.length() == 0) return 0;
+  if (!SD.exists(csvFileName)) return 0;
+  
+  File f = SD.open(csvFileName, FILE_READ);
+  if (!f) return 0;
+  uint32_t s = f.size();
+  f.close();
+  return s;
 }
 
 #line 1 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\http.ino"
@@ -3163,12 +3192,11 @@ void processSerialCommand() {
 
 // -------------------- External Variables (from FirmwarePro.ino)
 // --------------------
-// -------------------- UI --------------------
 #include "config.h"
 #include <RTClib.h>
 #include <SD.h>
 #include <SPI.h>
-#include <U8g2lib.h>
+// U8g2lib.h already included above
 
 extern SPIClass spiSD;
 extern Preferences prefs;
@@ -3177,7 +3205,18 @@ extern const int SD_SCLK;
 extern const int SD_MISO;
 extern const int SD_MOSI;
 
-extern U8G2_SSD1306_128X64_NONAME_F_HW_I2C u8g2;
+// Info Screen Helpers & Others
+extern String networkOperator;
+extern String networkTech;
+extern String registrationStatus;
+extern String signalQuality;
+extern bool syncRtcFromModem();
+extern String getNetworkTime();
+extern uint32_t getCsvFileSize();
+extern String generateCSVFileName();
+extern void writeCSVHeader();
+extern void writeErrorLogHeader();
+
 extern RTC_DS3231 rtc;
 extern TinyGsm modem;
 extern bool rtcOK;
@@ -3202,9 +3241,53 @@ extern volatile uint32_t displayStateStartTime;
 extern uint32_t lastOledActivity;
 extern String csvFileName;
 extern String VERSION;
-extern void writeCSVHeader();
-extern void writeErrorLogHeader();
-extern String generateCSVFileName();
+// writeCSVHeader etc moved up or kept if needed.
+
+// -------------------- Helper Logic --------------------
+
+// Centralized Toggle Logic for Starting/Stopping Sampling
+void toggleSamplingAction() {
+  if (streaming) {
+      // STOP
+      streaming = false;
+      loggingEnabled = false;
+      prefs.begin("system", false);
+      prefs.putBool("streaming", false);
+      prefs.end();
+      showMessage("DETENIDO");
+      Serial.println("[UI] Sampling STOPPED");
+  } else {
+      // START
+      Serial.println("[UI] Starting sampling...");
+      streaming = true;
+      if (!SDOK) {
+        spiSD.begin(SD_SCLK, SD_MISO, SD_MOSI, SD_CS);
+        SDOK = SD.begin(SD_CS, spiSD);
+      }
+      if (SDOK) {
+        csvFileName = generateCSVFileName();
+        writeCSVHeader();
+        prefs.begin("system", false);
+        prefs.putString("csvFile", csvFileName);
+        prefs.end();
+        Serial.println("[UI] SD OK, logging enabled");
+      }
+      loggingEnabled = SDOK;
+      prefs.begin("system", false);
+      prefs.putBool("streaming", true);
+      prefs.end();
+      
+      // Force immediate execution in loop
+      extern uint32_t lastHttpSend;
+      extern uint32_t lastSdSave;
+      lastHttpSend = 0; 
+      lastSdSave = 0;
+      
+      showMessage("INICIADO");
+      Serial.println("[UI] Sampling STARTED");
+  }
+}
+
 
 #define SD_SAVE_DISPLAY_MS 2000
 
@@ -3588,6 +3671,29 @@ void renderDisplay() {
     u8g2.sendBuffer();
     return;
   }
+  
+  if (displayState == DISP_NETWORK) {
+    if (millis() - displayStateStartTime > 5000) {
+      displayState = DISP_NORMAL;
+      renderDisplay();
+      return;
+    }
+    drawNetworkInfo();
+    return;
+  }
+  if (displayState == DISP_RTC) {
+    drawRtcInfo();
+    return;
+  }
+  if (displayState == DISP_STORAGE) {
+    if (millis() - displayStateStartTime > 5000) {
+      displayState = DISP_NORMAL;
+      renderDisplay();
+      return;
+    }
+    drawStorageInfo();
+    return;
+  }
 
   // FULL mode (sin menú)
   if (uiFullMode) {
@@ -3611,7 +3717,8 @@ void renderDisplay() {
 
       const uint16_t *ic = menus[0].icons;
       if (ic && ic[menuIndex] != 0) {
-        u8g2.setFont(u8g2_font_open_iconic_all_2x_t);
+        // Use consistent font for icons (Streamline matches the codes used)
+        u8g2.setFont(u8g2_font_streamline_all_t);
         uint8_t iconW = u8g2.getMaxCharWidth();
         u8g2.drawGlyph((128 - iconW) / 2, 35, ic[menuIndex]);
       }
@@ -3624,6 +3731,84 @@ void renderDisplay() {
   drawFooterCircles(menus[menuDepth].count, menuIndex);
   u8g2.sendBuffer();
 }
+
+// --- Specific Info Screens ---
+
+void drawNetworkInfo() {
+  u8g2.clearBuffer();
+  drawHeader();
+  u8g2.setFont(u8g2_font_6x10_tf);
+  
+  u8g2.drawStr(0, 20, "RED:");
+  u8g2.drawStr(30, 20, networkOperator.c_str());
+  
+  u8g2.drawStr(0, 32, "TEC:");
+  u8g2.drawStr(30, 32, networkTech.c_str());
+  
+  u8g2.drawStr(0, 44, "SIG:");
+  String sigStr = signalQuality + " CSQ";
+  u8g2.drawStr(30, 44, sigStr.c_str());
+  
+  u8g2.drawStr(0, 56, "EST:");
+  u8g2.drawStr(30, 56, registrationStatus.c_str());
+  
+  // Footer hint
+  u8g2.setFont(u8g2_font_5x7_tf);
+  // u8g2.drawStr(80, 62, "BTN1:SALIR"); // Removed for auto-timeout
+  
+  u8g2.sendBuffer();
+}
+
+void drawRtcInfo() {
+  u8g2.clearBuffer();
+  drawHeader();
+  u8g2.setFont(u8g2_font_6x10_tf);
+  
+  // Line 1: RTC
+  String rtcTime = "??:??:??";
+  if (rtcOK) {
+      DateTime now = rtc.now();
+      char buf[20];
+      snprintf(buf, sizeof(buf), "%02d:%02d:%02d %02d/%02d", now.hour(), now.minute(), now.second(), now.day(), now.month());
+      rtcTime = String(buf);
+  }
+  u8g2.drawStr(0, 25, ("RTC: " + rtcTime).c_str());
+  
+  // Line 2: Net
+  String netTime = getNetworkTime();
+  u8g2.drawStr(0, 40, ("NET: " + netTime).c_str());
+  
+  // Line 3: Action
+  u8g2.drawFrame(0, 48, 128, 15);
+  u8g2.drawStr(15, 59, "BTN2: SYN");
+  u8g2.drawStr(80, 59, "B1:EXIT");
+  
+  u8g2.sendBuffer();
+}
+
+void drawStorageInfo() {
+  u8g2.clearBuffer();
+  drawHeader();
+  u8g2.setFont(u8g2_font_6x10_tf);
+  
+  u8g2.drawStr(0, 22, "ARCHIVO ACTUAL:");
+  u8g2.drawStr(0, 34, csvFileName.length() > 0 ? csvFileName.c_str() : "(Ninguno)");
+  
+  u8g2.drawStr(0, 48, "TAMANO:");
+  uint32_t sz = getCsvFileSize();
+  String sizeStr;
+  if (sz < 1024) sizeStr = String(sz) + " B";
+  else if (sz < 1024*1024) sizeStr = String(sz/1024) + " KB";
+  else sizeStr = String(sz/(1024.0*1024.0), 2) + " MB";
+  
+  u8g2.drawStr(50, 48, sizeStr.c_str());
+  
+  u8g2.setFont(u8g2_font_5x7_tf);
+  u8g2.drawStr(0, 60, streaming ? "EN GRABACION..." : "DETENIDO");
+  
+  u8g2.sendBuffer();
+}
+
 
 // --- Action Handlers ---
 
@@ -3672,12 +3857,16 @@ void ui_btn1_click() {
     return;
   }
 
+  if (displayState == DISP_RTC) {
+    displayState = DISP_NORMAL;
+    renderDisplay();
+    return;
+  }
+
   if (uiFullMode) {
-    // En modo FULL, BTN1 click ahora sirve para SALIR al menú principal
-    uiFullMode = false;
-    menuDepth = 0;
-    menuIndex = 4; // Quedar en el item "MODO FULL"
-    showMessage("MODO MENU");
+    // En modo FULL, BTN1 click ahora INICIA/DETIENE el muestreo (Acción rápida)
+    // Reutilizamos la lógica de toggle que antes estaba en BTN2
+    toggleSamplingAction();
     renderDisplay();
     return;
   }
@@ -3695,83 +3884,40 @@ void ui_btn1_click() {
 void ui_btn2_click() {
   Serial.println("[UI] BTN2 Click");
   if (displayState == DISP_PROMPT) {
-    // Perform Toggle
-    if (streaming) {
-      // STOP
-      streaming = false;
-      loggingEnabled = false;
-      prefs.begin("system", false);
-      prefs.putBool("streaming", false);
-      prefs.end();
-      showMessage("DETENIDO");
-      Serial.println("[UI] Sampling STOPPED");
-    } else {
-      // START
-      Serial.println("[UI] Starting sampling...");
-      streaming = true;
-      if (!SDOK) {
-        spiSD.begin(SD_SCLK, SD_MISO, SD_MOSI, SD_CS);
-        SDOK = SD.begin(SD_CS, spiSD);
-      }
-      if (SDOK) {
-        csvFileName = generateCSVFileName();
-        writeCSVHeader();
-        prefs.begin("system", false);
-        prefs.putString("csvFile", csvFileName);
-        prefs.end();
-        Serial.println("[UI] SD OK, logging enabled");
-      }
-      loggingEnabled = SDOK;
-      prefs.begin("system", false);
-      prefs.putBool("streaming", true);
-      prefs.end();
-      
-      // Force immediate execution in loop
-      extern uint32_t lastHttpSend;
-      extern uint32_t lastSdSave;
-      lastHttpSend = 0; 
-      lastSdSave = 0;
-      
-      showMessage("INICIADO");
-      Serial.println("[UI] Sampling STARTED");
-    }
+    // Perform Toggle using helper
+    toggleSamplingAction();
     displayState = DISP_NORMAL;
     renderDisplay();
     return;
   }
+  
 
   if (uiFullMode) {
-    // En modo FULL, BTN2 click también alterna muestreo (consistente con prompt)
-    if (streaming) {
-      streaming = false;
-      loggingEnabled = false;
-      prefs.begin("system", false);
-      prefs.putBool("streaming", false);
-      prefs.end();
-      showMessage("DETENIDO");
-      Serial.println("[UI] Muestreo detenido (FULL)");
-    } else {
-      streaming = true;
-      if (!SDOK) {
-        spiSD.begin(SD_SCLK, SD_MISO, SD_MOSI, SD_CS);
-        SDOK = SD.begin(SD_CS, spiSD);
-      }
-      if (SDOK) {
-        csvFileName = generateCSVFileName();
-        writeCSVHeader();
-        prefs.begin("system", false);
-        prefs.putString("csvFile", csvFileName);
-        prefs.end();
-      }
-      loggingEnabled = SDOK;
-      prefs.begin("system", false);
-      prefs.putBool("streaming", true);
-      prefs.end();
-      showMessage("INICIADO");
-      Serial.println("[UI] Muestreo iniciado (FULL)");
-    }
+    // En modo FULL, BTN2 click ahora SALE al menú principal
+    uiFullMode = false;
+    menuDepth = 0;
+    menuIndex = 4; // Quedar en el item "MODO FULL"
+    showMessage("MODO MENU");
     renderDisplay();
     return;
+  }
+  
+  // Handle Info Screen Actions
+  if (displayState == DISP_RTC) {
+     showMessage("Sincronizando...");
+     if (syncRtcFromModem()) {
+       showMessage("SYNC OK");
+     } else {
+       showMessage("SYNC ERROR");
+     }
+     displayState = DISP_RTC; // Return to RTC screen
+     renderDisplay();
+     return;
+  }
+  if (displayState == DISP_NETWORK || displayState == DISP_STORAGE) {
+      // Just refresh
+      renderDisplay();
+      return;
   }
 
   if (!uiCanHandleAction())
@@ -3824,12 +3970,14 @@ void ui_btn2_click() {
     }
   } else if (menuDepth == 3) {
     // Configuration Menu
-    if (menuIndex == 0) { // REDES (placeholder)
-      showMessage("REDES...");
+    if (menuIndex == 0) { // REDES
+      displayState = DISP_NETWORK;
+      displayStateStartTime = millis(); // Start timeout timer
     } else if (menuIndex == 1) { // GUARDADO
-      showMessage("GUARDADO...");
+      displayState = DISP_STORAGE;
+      displayStateStartTime = millis(); // Start timeout timer
     } else if (menuIndex == 2) { // RTC
-      showMessage("RTC...");
+      displayState = DISP_RTC;
     } else if (menuIndex == 3) { // Reiniciar
       handleRestart();
     } else if (menuIndex == 4) { // Volver
@@ -3862,14 +4010,11 @@ void ui_btn2_click() {
   renderDisplay();
 }
 
-// BTN2 Hold: deshabilitado por solicitud del usuario
-void ui_btn2_hold() {
-  if (!uiCanHandleAction())
-    return;
-
-  // Acción de hold desactivada para evitar conflictos con navegación
-  Serial.println("[UI] BTN2 Hold ignorado");
-}
+// BTN2 Hold: Eliminado / Vacío
+// La lógica se ha simplificado para no usar Hold.
+// BTN2 Hold: Eliminado / Vacío
+// La lógica se ha simplificado para no usar Hold.
+// (Function removed to clean up code)
 
 // Placeholder de máquina de estados UI para futuras extensiones.
 // Actualmente el estado se actualiza en handlers y renderDisplay().

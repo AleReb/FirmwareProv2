@@ -49,7 +49,7 @@ const byte CMD = 0xB4;
 const byte TAIL = 0xAB;
 
 // Firmware version
-String VERSION = "Pro V0.0.26";
+String VERSION = "Pro V0.0.32";
 
 // Global states
 bool rtcOK = false;
@@ -74,19 +74,19 @@ WebServer server(80); // Used in wifi.ino
 SoftwareSerial pms(pms_TX, pms_RX);
 
 // Button flags (edge + debounce)
-bool btn1PressedFlag = false;
-bool btn2PressedFlag = false;
-bool btn1ClickFlag = false;
-bool btn2ClickFlag = false;
-bool btn2HoldFlag = false;
-bool btn2LongFired = false;
-uint32_t btn1PressStartMs = 0;
-uint32_t btn2PressStartMs = 0;
-uint32_t btn1LastEdgeMs = 0;
-uint32_t btn2LastEdgeMs = 0;
-const uint32_t BTN_DEBOUNCE_MS = 35;
-const uint32_t BTN_MIN_CLICK_MS = 25;
-const uint32_t BTN2_LONG_MS = 700;
+// Button flags (edge + debounce)
+volatile bool btn1ClickFlag = false;
+volatile bool btn2ClickFlag = false;
+volatile bool btn2HoldFlag = false;
+
+// Internal Flags for ISR State tracking
+// (Removed complex hold state tracking)
+
+// Debounce Tracking
+volatile uint32_t lastDebounceTime1 = 0;
+volatile uint32_t lastDebounceTime2 = 0;
+const uint32_t BTN1_DEBOUNCE_MS = 200; // Increased for Button 1 stability
+const uint32_t BTN2_DEBOUNCE_MS = 200;  // Increased for Button 2 stability (was 50)
 
 // Data Variables
 uint16_t PM1 = 0, PM25 = 0, PM10 = 0;
@@ -304,13 +304,15 @@ void downloadXtraIfDue();
 void parseNMEA(const String &line);
 void saveFailedTransmission(const String &url, const String &errorType);
 bool sendCurrentMeasurement();
-void pollButtonFlags();
-void dispatchButtonFlags();
+void handleButtonLogic(); // Renamed from dispatchButtonFlags
+
+// ISR Function Prototypes
+void IRAM_ATTR isr_btn1();
+void IRAM_ATTR isr_btn2();
 
 // UI Event Handlers
 extern void ui_btn1_click();
 extern void ui_btn2_click();
-extern void ui_btn2_hold();
 
 // Oled Status Helper (used by wifi/main)
 // Renderiza un estado rápido en OLED con hasta 4 líneas de texto.
@@ -519,47 +521,33 @@ bool sendCurrentMeasurement() {
 
 // Poll de botones por flags con debounce por software.
 // BTN activo en LOW (INPUT_PULLUP): al soltar genera click flag.
-void pollButtonFlags() {
+// -------------------- INTERRUPT SERVICE ROUTINES --------------------
+
+// Button 1: Simply trigger Click on FALLING edge (Press)
+// This makes it feel instant. Debounce ensures single trigger.
+void IRAM_ATTR isr_btn1() {
   uint32_t now = millis();
-
-  bool b1Pressed = (digitalRead(BUTTON_PIN_1) == LOW);
-  if (b1Pressed != btn1PressedFlag && (now - btn1LastEdgeMs) >= BTN_DEBOUNCE_MS) {
-    btn1LastEdgeMs = now;
-    btn1PressedFlag = b1Pressed;
-    if (b1Pressed) {
-      btn1PressStartMs = now;
-    } else if ((now - btn1PressStartMs) >= BTN_MIN_CLICK_MS) {
-      btn1ClickFlag = true;
-    }
-  }
-
-  bool b2Pressed = (digitalRead(BUTTON_PIN_2) == LOW);
-  if (b2Pressed != btn2PressedFlag && (now - btn2LastEdgeMs) >= BTN_DEBOUNCE_MS) {
-    btn2LastEdgeMs = now;
-    btn2PressedFlag = b2Pressed;
-    if (b2Pressed) {
-      btn2PressStartMs = now;
-      btn2LongFired = false;
-    } else {
-      if (!btn2LongFired && (now - btn2PressStartMs) >= BTN_MIN_CLICK_MS) {
-        btn2ClickFlag = true;
-      }
-      btn2LongFired = false;
-    }
-  }
-
-  if (btn2PressedFlag && !btn2LongFired && (now - btn2PressStartMs) >= BTN2_LONG_MS) {
-    btn2HoldFlag = true;
-    btn2LongFired = true;
+  if (now - lastDebounceTime1 > BTN1_DEBOUNCE_MS) {
+    lastDebounceTime1 = now;
+    btn1ClickFlag = true;
   }
 }
 
-// Ejecuta handlers UI una sola vez por flag levantado.
-void dispatchButtonFlags() {
-  if (btn2HoldFlag) {
-    btn2HoldFlag = false;
-    ui_btn2_hold();
+// Button 2: Simple Click (FALLING)
+// Logic simplified: No more Hold detection. Just Click.
+void IRAM_ATTR isr_btn2() {
+  uint32_t now = millis();
+  
+  // Debounce check
+  if (now - lastDebounceTime2 > BTN2_DEBOUNCE_MS) {
+    lastDebounceTime2 = now;
+    btn2ClickFlag = true;
   }
+}
+
+// Checks logic (Simplified)
+void handleButtonLogic() {
+  // Dispatch Actions
   if (btn1ClickFlag) {
     btn1ClickFlag = false;
     ui_btn1_click();
@@ -660,13 +648,11 @@ void setup() {
   u8g2.sendBuffer();
   delay(1000);
 
-  // BUTTONS (flags + polling)
+  // BUTTONS (Interrupts)
   pinMode(BUTTON_PIN_1, INPUT_PULLUP);
   pinMode(BUTTON_PIN_2, INPUT_PULLUP);
-  btn1PressedFlag = (digitalRead(BUTTON_PIN_1) == LOW);
-  btn2PressedFlag = (digitalRead(BUTTON_PIN_2) == LOW);
-  btn1LastEdgeMs = millis();
-  btn2LastEdgeMs = millis();
+  attachInterrupt(digitalPinToInterrupt(BUTTON_PIN_1), isr_btn1, FALLING);
+  attachInterrupt(digitalPinToInterrupt(BUTTON_PIN_2), isr_btn2, FALLING);
 
   // MODEM
   SerialAT.begin(115200, SERIAL_8N1, MODEM_RX, MODEM_TX);
@@ -769,8 +755,8 @@ void loop() {
   esp_task_wdt_reset();
 
   // Button flags
-  pollButtonFlags();
-  dispatchButtonFlags();
+  // Button Logic (State Check & Dispatch)
+  handleButtonLogic();
 
   if (wifiModeActive) {
     server.handleClient();
