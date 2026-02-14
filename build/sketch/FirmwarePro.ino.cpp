@@ -51,7 +51,7 @@ const byte CMD = 0xB4;
 const byte TAIL = 0xAB;
 
 // Firmware version
-String VERSION = "Pro V0.0.34";
+String VERSION = "Pro V0.0.35";
 
 // Global states
 bool rtcOK = false;
@@ -380,43 +380,43 @@ static bool getModemEpoch(uint32_t &epoch_out);
 void syncRtcSmart();
 #line 50 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\serial_commands.ino"
 void processSerialCommand();
-#line 67 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
+#line 68 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
 void toggleSamplingAction();
-#line 129 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
+#line 130 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
 void showMessage(const char *msg);
-#line 206 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
+#line 207 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
 static bool uiCanHandleAction();
-#line 222 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
+#line 223 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
 String getClockTime();
-#line 234 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
+#line 235 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
 int calcBatteryPercent(float v);
-#line 244 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
+#line 245 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
 void drawBatteryDynamic(int xPos, int yPos, float v);
-#line 289 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
+#line 290 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
 void drawActivityDot(int x, bool enabled, bool active, bool ok);
-#line 306 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
+#line 307 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
 void drawHeader();
-#line 356 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
+#line 357 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
 void drawFooterCircles(uint8_t cnt, uint8_t sel);
-#line 371 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
+#line 372 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
 void drawSensorValue(uint8_t idx);
-#line 402 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
+#line 403 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
 void drawMenuItemWithIcon(uint8_t depth, uint8_t idx);
-#line 421 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
+#line 422 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
 void drawFullModeView();
-#line 567 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
+#line 568 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
 void drawNetworkInfo();
-#line 592 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
+#line 593 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
 void drawRtcInfo();
-#line 619 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
+#line 620 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
 void drawStorageInfo();
-#line 642 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
+#line 643 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
 void drawGpsInfo();
-#line 663 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
+#line 664 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
 void handleRestart();
-#line 680 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
+#line 681 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
 void handleConfigWifi();
-#line 872 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
+#line 877 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
 void updateDisplayStateMachine();
 #line 178 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\wifi.ino"
 static String sanitizeForId(const String &s);
@@ -3243,6 +3243,7 @@ extern RTC_DS3231 rtc;
 extern TinyGsm modem;
 extern bool rtcOK;
 extern bool SDOK;
+extern bool wifiModeActive;
 extern bool loggingEnabled;
 extern bool streaming;
 extern bool haveFix;
@@ -3382,13 +3383,13 @@ const uint16_t cfgIcons[] = {
 
 // Menú de “Información”
 // Menú de “Información”
-const char *infoItems[] = {"VERSION", "WIFI SD (ON/OFF)", "GPS", "REDES", "GUARDADO", "MODO FULL", "VOLVER"};
+const char *infoItems[] = {"VERSION", "REDES", "GPS", "GUARDADO", "WIFI SD (ON/OFF)", "MODO FULL", "VOLVER"};
 const uint16_t infoIcons[] = {
     0x0085, // version
-    0x0093, // memoria (usado para wifi sd)
-    0x01A5, // GPS (ícono de muestreo)
     0x01CC, // redes
+    0x01A5, // GPS
     0x0176, // guardado
+    0x0093, // wifi sd
     0x0185, // modo full
     0x01A9  // volver
 };
@@ -4039,17 +4040,21 @@ void ui_btn2_click() {
     // Información
     if (menuIndex == 0) { // Version
       showMessage(VERSION.c_str());
-    } else if (menuIndex == 1) { // ACC. WIFI SD
-      handleConfigWifi();
+    } else if (menuIndex == 1) { // Redes
+      displayState = DISP_NETWORK;
+      displayStateStartTime = millis();
     } else if (menuIndex == 2) { // GPS
       displayState = DISP_GPS;
       displayStateStartTime = millis();
-    } else if (menuIndex == 3) { // Redes
-      displayState = DISP_NETWORK;
-      displayStateStartTime = millis();
-    } else if (menuIndex == 4) { // Guardado
+    } else if (menuIndex == 3) { // Guardado
       displayState = DISP_STORAGE;
       displayStateStartTime = millis();
+    } else if (menuIndex == 4) { // WIFI SD (ON/OFF)
+      bool wasActive = wifiModeActive;
+      handleConfigWifi();
+      if (wasActive != wifiModeActive) {
+        showMessage(wifiModeActive ? "WIFI SD: ON" : "WIFI SD: OFF");
+      }
     } else if (menuIndex == 5) { // MODO FULL
       uiFullMode = true;
       displayState = DISP_NORMAL;

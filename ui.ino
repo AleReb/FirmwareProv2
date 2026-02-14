@@ -35,6 +35,7 @@ extern RTC_DS3231 rtc;
 extern TinyGsm modem;
 extern bool rtcOK;
 extern bool SDOK;
+extern bool wifiModeActive;
 extern bool loggingEnabled;
 extern bool streaming;
 extern bool haveFix;
@@ -174,13 +175,13 @@ const uint16_t cfgIcons[] = {
 
 // Menú de “Información”
 // Menú de “Información”
-const char *infoItems[] = {"VERSION", "WIFI SD (ON/OFF)", "GPS", "REDES", "GUARDADO", "MODO FULL", "VOLVER"};
+const char *infoItems[] = {"VERSION", "REDES", "GPS", "GUARDADO", "WIFI SD (ON/OFF)", "MODO FULL", "VOLVER"};
 const uint16_t infoIcons[] = {
     0x0085, // version
-    0x0093, // memoria (usado para wifi sd)
-    0x01A5, // GPS (ícono de muestreo)
     0x01CC, // redes
+    0x01A5, // GPS
     0x0176, // guardado
+    0x0093, // wifi sd
     0x0185, // modo full
     0x01A9  // volver
 };
@@ -831,17 +832,21 @@ void ui_btn2_click() {
     // Información
     if (menuIndex == 0) { // Version
       showMessage(VERSION.c_str());
-    } else if (menuIndex == 1) { // ACC. WIFI SD
-      handleConfigWifi();
+    } else if (menuIndex == 1) { // Redes
+      displayState = DISP_NETWORK;
+      displayStateStartTime = millis();
     } else if (menuIndex == 2) { // GPS
       displayState = DISP_GPS;
       displayStateStartTime = millis();
-    } else if (menuIndex == 3) { // Redes
-      displayState = DISP_NETWORK;
-      displayStateStartTime = millis();
-    } else if (menuIndex == 4) { // Guardado
+    } else if (menuIndex == 3) { // Guardado
       displayState = DISP_STORAGE;
       displayStateStartTime = millis();
+    } else if (menuIndex == 4) { // WIFI SD (ON/OFF)
+      bool wasActive = wifiModeActive;
+      handleConfigWifi();
+      if (wasActive != wifiModeActive) {
+        showMessage(wifiModeActive ? "WIFI SD: ON" : "WIFI SD: OFF");
+      }
     } else if (menuIndex == 5) { // MODO FULL
       uiFullMode = true;
       displayState = DISP_NORMAL;
