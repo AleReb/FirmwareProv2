@@ -88,7 +88,7 @@ void drawWifiModeScreen() {
 
   u8g2.drawFrame(0, 50, 128, 14);
   u8g2.setFont(u8g2_font_5x7_tf);
-  u8g2.drawStr(2, 60, "B1:EXIT");
+  u8g2.drawStr(2, 60, "B1:---");
   u8g2.drawStr(52, 60, wifiModeActive ? "B2:OFF" : "B2:ON");
 
   u8g2.sendBuffer();
@@ -366,12 +366,12 @@ void drawHeader() {
   bool networkError = (csq == 99);
   if (networkError) {
     u8g2.setFont(u8g2_font_open_iconic_all_1x_t);
-    u8g2.drawGlyph(82, 9, 0x0118);
+    u8g2.drawGlyph(84, 9, 0x0118);
   } else {
     u8g2.setFont(u8g2_font_open_iconic_all_1x_t);
-    u8g2.drawGlyph(82, 9, 0x00FD);
+    u8g2.drawGlyph(84, 9, 0x00FD);
     u8g2.setFont(u8g2_font_5x7_tf);
-    u8g2.setCursor(90, 9);
+    u8g2.setCursor(92, 9);
     String csqStr = String(csq);
     if (csqStr.length() > 2)
       csqStr = csqStr.substring(0, 2);
@@ -511,7 +511,7 @@ void renderDisplay() {
   if (displayState == DISP_PROMPT) {
     u8g2.drawFrame(0, 12, 128, 52);
     u8g2.setFont(u8g2_font_6x12_tf);
-    const char* l1 = "¿CONFIRMAR ACCION?";
+    const char* l1 = "CONFIRMAR ACCION?";
     const char* l2 = streaming ? "DETENER MUESTREO" : "INICIAR MUESTREO";
     u8g2.drawStr((128 - u8g2.getStrWidth(l1)) / 2, 28, l1);
     u8g2.drawStr((128 - u8g2.getStrWidth(l2)) / 2, 42, l2);
@@ -747,7 +747,7 @@ void ui_btn1_click() {
   }
 
   if (displayState == DISP_WIFI) {
-    displayState = DISP_NORMAL;
+    // En pantalla WiFi, BTN1 no hace nada (bloqueado por solicitud)
     renderDisplay();
     return;
   }
