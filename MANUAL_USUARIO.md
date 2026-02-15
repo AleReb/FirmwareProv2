@@ -193,3 +193,24 @@ Comandos principales:
 - La password AP por defecto es conocida (`12345678`), usar en entorno controlado.
 - Evitar exposición pública del AP.
 - Respaldar SD periódicamente.
+
+---
+
+## 11) Disclaimer de responsabilidad
+
+Este firmware y su documentación se entregan **"tal cual"**, sin garantías explícitas ni implícitas de desempeño, disponibilidad o aptitud para un propósito particular.  
+El uso en terreno, decisiones operativas y cumplimiento normativo son responsabilidad del usuario/institución que lo despliega.  
+El autor y colaboradores no se responsabilizan por pérdidas de datos, daños directos o indirectos, ni por usos fuera de contexto técnico seguro.
+
+---
+
+## 12) Licencia
+
+Este manual se publica bajo licencia:
+
+**Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0)**  
+https://creativecommons.org/licenses/by-nc/4.0/
+
+En resumen:
+- ✅ Puedes compartir y adaptar con atribución.
+- ❌ No se permite uso comercial sin autorización adicional.

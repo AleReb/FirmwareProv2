@@ -300,3 +300,24 @@ Para empaquetado comercial/científico:
 - Establecer protocolo de calibración y mantenimiento
 - Registrar trazabilidad de lote/dispositivo vía `DEVICE_ID_STR`
 - Publicar este manual junto a procedimiento de QA de fábrica
+
+---
+
+## Apéndice D — Disclaimer de responsabilidad
+
+Este firmware y este documento técnico se entregan **"as-is"** (tal cual), sin garantía de funcionamiento ininterrumpido ni adecuación a un caso de uso específico.  
+La validación metrológica, seguridad eléctrica, cumplimiento regulatorio y operación final son responsabilidad del integrador/desplegador.  
+Los autores no asumen responsabilidad por daños, pérdidas de datos o consecuencias derivadas del uso del sistema.
+
+---
+
+## Apéndice E — Licencia de documentación
+
+Este manual se distribuye bajo:
+
+**Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0)**  
+https://creativecommons.org/licenses/by-nc/4.0/
+
+Permisos principales:
+- Compartir y adaptar con atribución.
+- Uso no comercial.
