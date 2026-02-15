@@ -88,7 +88,7 @@ void drawWifiModeScreen() {
 
   u8g2.drawFrame(0, 50, 128, 14);
   u8g2.setFont(u8g2_font_5x7_tf);
-  u8g2.drawStr(2, 60, "B1:---");
+  u8g2.drawStr(2, 60, wifiModeActive ? "B1:---" : "B1:EXIT");
   u8g2.drawStr(52, 60, wifiModeActive ? "B2:OFF" : "B2:ON");
 
   u8g2.sendBuffer();
@@ -747,7 +747,12 @@ void ui_btn1_click() {
   }
 
   if (displayState == DISP_WIFI) {
-    // En pantalla WiFi, BTN1 no hace nada (bloqueado por solicitud)
+    // Regla solicitada:
+    // - Si WiFi está ACTIVO: BTN1 no hace nada (bloqueado)
+    // - Si WiFi está INACTIVO: BTN1 permite salir
+    if (!wifiModeActive) {
+      displayState = DISP_NORMAL;
+    }
     renderDisplay();
     return;
   }
