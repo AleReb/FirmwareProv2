@@ -669,15 +669,34 @@ void setup() {
   digitalWrite(MODEM_DTR, LOW);
 
   oledStatus("MODEM", "Starting...");
+
+  // LED heartbeat during modem startup (visual anti-freeze feedback)
+  bool modemBlinkState = false;
+
   for (int i = 0; i < 3; i++) {
     while (!modem.testAT(1000)) {
       Serial.println("[MODEM] Retry...");
+
+      // Blink RGB while retrying modem init
+      modemBlinkState = !modemBlinkState;
+      if (modemBlinkState) {
+        pixels.setPixelColor(0, pixels.Color(0, 0, 80)); // soft blue
+      } else {
+        pixels.setPixelColor(0, pixels.Color(0, 0, 0));
+      }
+      pixels.show();
+
       digitalWrite(MODEM_PWRKEY, HIGH);
       delay(300);
       digitalWrite(MODEM_PWRKEY, LOW);
       delay(1000);
     }
   }
+
+  // Solid blue when modem is ready
+  pixels.setPixelColor(0, pixels.Color(0, 50, 100));
+  pixels.show();
+
   oledStatus("MODEM", "OK");
 
   // Modem setup
