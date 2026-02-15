@@ -173,6 +173,9 @@ const char *footerHtml = R"rawliteral(
 )rawliteral";
 
 #include <ctype.h>
+#include <DNSServer.h>
+
+extern DNSServer dnsServer;
 
 // Replace non-alphanumeric chars by '_' (safe for HTML element ids)
 static String sanitizeForId(const String &s) {
@@ -450,6 +453,9 @@ void startWifiApServer() {
     return;
   }
 
+  // Iniciar DNS Server para Portal Cautivo (Redirige todo a nuestra IP)
+  dnsServer.start(53, "*", WiFi.softAPIP());
+
   setupWifiRoutes();
   server.begin();
   wifiModeActive = true;
@@ -460,16 +466,15 @@ void startWifiApServer() {
   Serial.println(AP_SSID_STR);
   Serial.print("[WiFi] AP IP: ");
   Serial.println(ip);
-
-  oledStatus("WIFI MODE", "SSID: " + AP_SSID_STR,
-             "PASS: " + String(AP_PASSWORD), "IP: " + ip.toString());
+  
+  // No llamamos oledStatus aqui porque ui.ino manejará la pantalla dedicada
 }
 
 void stopWifiApServer() {
+  dnsServer.stop();
   server.stop();
   WiFi.softAPdisconnect(true);
   WiFi.mode(WIFI_OFF);
   wifiModeActive = false;
   Serial.println("[WiFi] AP stopped");
-  // (opcional) refrescar OLED con tu UI normal al siguiente ciclo
 }
