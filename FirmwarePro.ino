@@ -26,7 +26,6 @@
 // #include <TinyGsmClient.h> // Moved to config.h
 #include <U8g2lib.h>
 #include <WebServer.h>
-#include <DNSServer.h> // Added for Captive Portal
 #include <WiFi.h>
 #include <Wire.h>
 #include <esp_task_wdt.h>
@@ -70,7 +69,6 @@ RTC_DS3231 rtc;
 Preferences prefs;
 SPIClass spiSD(HSPI);
 WebServer server(80); // Used in wifi.ino
-DNSServer dnsServer;  // Captive Portal DNS
 
 // PMS
 SoftwareSerial pms(pms_TX, pms_RX);
@@ -762,33 +760,8 @@ void loop() {
   handleButtonLogic();
 
   if (wifiModeActive) {
-    // Modo WiFi Exclusivo:
-    // 1. Procesa DNS (Portal Cautivo)
-    // 2. Procesa WebServer
-    // 3. Mantiene refresco mínimo de pantalla (para no congelar UI)
-    // 4. Mantiene lectura mínima de GPS si hay FIX (para no perderlo/saturar buffer), pero sin logica pesada.
-    
-    dnsServer.processNextRequest();
     server.handleClient();
-    
-    // Mantener GPS vivo (vaciar buffer) si ya teníamos FIX, para no perderlo al salir.
-    // No procesamos la data completa para ahorrar CPU, solo lectura básica si es necesario 
-    // o dejamos que el buffer maneje lo suyo. 
-    // En este caso, simplemente NO lo apagamos. El módulo sigue encendido.
-    // Si queremos mantener el buffer limpio:
-    if (haveFix) {
-       // Opcional: leer y descartar o procesar mínimo. 
-       // Por ahora, confiamos en que el módulo sigue con energía.
-       // Solo llamamos al watchdog del GNSS para que no crea que se colgó si implementamos timeout.
-       gnssWatchdog(); 
-    }
-
-    static uint32_t lastWifiDisp = 0;
-    if (millis() - lastWifiDisp > 500) {
-       lastWifiDisp = millis();
-       renderDisplay();
-    }
-    return; 
+    return;
   }
 
   // Sensors & GNSS

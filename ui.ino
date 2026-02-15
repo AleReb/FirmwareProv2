@@ -64,54 +64,6 @@ extern String currentNote;
 
 // -------------------- Helper Logic --------------------
 
-extern String apIpStr;
-extern String AP_SSID_STR;
-extern const char *AP_PASSWORD;
-
-// --- Helper Logic ---
-
-// Pantalla dedicada para el Modo WiFi Exclusivo
-void drawWifiModeScreen() {
-  u8g2.clearBuffer();
-  u8g2.drawFrame(0, 0, 128, 64);
-  
-  u8g2.setFont(u8g2_font_6x12_tf);
-  // Header centrado
-  const char* title = "MODO WIFI (ACTIVO)";
-  int w = u8g2.getStrWidth(title);
-  u8g2.drawBox(0, 0, 128, 12);
-  u8g2.setDrawColor(0); // Invertir color para texto
-  u8g2.drawStr((128-w)/2, 10, title);
-  u8g2.setDrawColor(1); // Restaurar
-  
-  u8g2.setFont(u8g2_font_5x7_tf);
-  u8g2.setCursor(4, 22);
-  u8g2.print("SSID: " + AP_SSID_STR);
-  
-  u8g2.setCursor(4, 32);
-  u8g2.print("PASS: " + String(AP_PASSWORD));
-  
-  u8g2.setCursor(4, 42);
-  u8g2.print("IP:   " + apIpStr);
-  
-  u8g2.drawLine(0, 46, 128, 46);
-  
-  // Estado dinámico
-  static int dot = 0;
-  dot = (dot + 1) % 4;
-  u8g2.setCursor(4, 58);
-  u8g2.print("ESPERANDO CONEXION");
-  for(int i=0; i<dot; i++) u8g2.print(".");
-  
-  // Footer invertido
-  u8g2.setFont(u8g2_font_4x6_tf);
-  const char* exitTxt = "[BTN2] SALIR Y APAGAR";
-  int we = u8g2.getStrWidth(exitTxt);
-  u8g2.drawStr(128-we-2, 62, exitTxt);
-  
-  u8g2.sendBuffer();
-}
-
 // Centralized Toggle Logic for Starting/Stopping Sampling
 void toggleSamplingAction() {
   if (streaming) {
@@ -580,12 +532,6 @@ void renderDisplay() {
     u8g2.sendBuffer();
     return;
   }
-  
-  // WiFi Mode Screen (Override Menu)
-  if (wifiModeActive) {
-    drawWifiModeScreen();
-    return; // Stop here, do not render menu
-  }
 
   // Normal Menu Rendering
   if (menuDepth == 0) {
@@ -748,10 +694,6 @@ void handleConfigWifi() {
 // Reactiva OLED si estaba en ahorro de energía.
 void ui_btn1_click() {
   Serial.println("[UI] BTN1 Click");
-  
-  // En modo WiFi, BTN1 no hace nada (o podría alternar info)
-  if (wifiModeActive) return;
-  
   if (!uiCanHandleAction())
     return;
 
@@ -788,13 +730,6 @@ void ui_btn1_click() {
 // Controla navegación entre niveles y acciones no críticas.
 void ui_btn2_click() {
   Serial.println("[UI] BTN2 Click");
-  
-  // Manejo especial Modo WiFi: Salir y Apagar
-  if (wifiModeActive) {
-     handleConfigWifi(); // Esto llamará a stopWifiApServer
-     return;
-  }
-  
   if (displayState == DISP_PROMPT) {
     // Perform Toggle using helper
     toggleSamplingAction();
