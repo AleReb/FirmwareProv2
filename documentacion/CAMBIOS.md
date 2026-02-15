@@ -1,5 +1,17 @@
 # Registro de Cambios - FirmwarePro
 
+## [V0.1.0] - 2026-02-14
+### Primera versión formal (baseline de producto)
+- Se establece versión de firmware en código a **Pro V0.1.0** (`FirmwarePro.ino`).
+- Ajustes finales de UI WiFi:
+  - Pantalla WiFi dedicada mostrando **SSID / PASS / IP**.
+  - Control por botones según estado WiFi:
+    - Con WiFi activo: pantalla bloqueada (sin salida accidental).
+    - Toggle ON/OFF por BTN2.
+- Se repone feedback visual de arranque de módem:
+  - Parpadeo de LED RGB durante `MODEM Starting...` para indicar actividad y evitar falsa percepción de bloqueo.
+- Documentación ordenada en carpeta `documentacion/` con `README.md` en raíz y `LICENSE` en root del repo.
+
 ## [V0.0.35] - 2026-02-14
 ### WiFi SD, documentación y control de release
 - Se consolidó versión de firmware a **Pro V0.0.35**.
