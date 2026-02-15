@@ -70,45 +70,27 @@ extern const char *AP_PASSWORD;
 
 // --- Helper Logic ---
 
-// Pantalla dedicada para el Modo WiFi Exclusivo
+// Pantalla dedicada de control WiFi (estilo RTC)
 void drawWifiModeScreen() {
   u8g2.clearBuffer();
-  u8g2.drawFrame(0, 0, 128, 64);
-  
-  u8g2.setFont(u8g2_font_6x12_tf);
-  // Header centrado
-  const char* title = "MODO WIFI (ACTIVO)";
-  int w = u8g2.getStrWidth(title);
-  u8g2.drawBox(0, 0, 128, 12);
-  u8g2.setDrawColor(0); // Invertir color para texto
-  u8g2.drawStr((128-w)/2, 10, title);
-  u8g2.setDrawColor(1); // Restaurar
-  
+  drawHeader();
+  u8g2.setFont(u8g2_font_6x10_tf);
+
+  u8g2.drawStr(0, 20, "WIFI SD:");
+  u8g2.drawStr(50, 20, wifiModeActive ? "ACTIVO" : "INACTIVO");
+
   u8g2.setFont(u8g2_font_5x7_tf);
-  u8g2.setCursor(4, 22);
-  u8g2.print("SSID: " + AP_SSID_STR);
-  
-  u8g2.setCursor(4, 32);
-  u8g2.print("PASS: " + String(AP_PASSWORD));
-  
-  u8g2.setCursor(4, 42);
-  u8g2.print("IP:   " + apIpStr);
-  
-  u8g2.drawLine(0, 46, 128, 46);
-  
-  // Estado dinámico
-  static int dot = 0;
-  dot = (dot + 1) % 4;
-  u8g2.setCursor(4, 58);
-  u8g2.print("ESPERANDO CONEXION");
-  for(int i=0; i<dot; i++) u8g2.print(".");
-  
-  // Footer invertido
-  u8g2.setFont(u8g2_font_4x6_tf);
-  const char* exitTxt = "[BTN2] SALIR Y APAGAR";
-  int we = u8g2.getStrWidth(exitTxt);
-  u8g2.drawStr(128-we-2, 62, exitTxt);
-  
+  u8g2.drawStr(0, 31, ("SSID: " + AP_SSID_STR).c_str());
+  u8g2.drawStr(0, 40, ("PASS: " + String(AP_PASSWORD)).c_str());
+
+  String ip = wifiModeActive ? apIpStr : String("0.0.0.0");
+  u8g2.drawStr(0, 49, ("IP: " + ip).c_str());
+
+  u8g2.drawFrame(0, 50, 128, 14);
+  u8g2.setFont(u8g2_font_5x7_tf);
+  u8g2.drawStr(2, 60, "B1:EXIT");
+  u8g2.drawStr(52, 60, wifiModeActive ? "B2:OFF" : "B2:ON");
+
   u8g2.sendBuffer();
 }
 
@@ -574,17 +556,16 @@ void renderDisplay() {
     return;
   }
 
+  if (displayState == DISP_WIFI) {
+    drawWifiModeScreen();
+    return;
+  }
+
   // FULL mode (sin menú)
   if (uiFullMode) {
     drawFullModeView();
     u8g2.sendBuffer();
     return;
-  }
-  
-  // WiFi Mode Screen (Override Menu)
-  if (wifiModeActive) {
-    drawWifiModeScreen();
-    return; // Stop here, do not render menu
   }
 
   // Normal Menu Rendering
@@ -748,10 +729,7 @@ void handleConfigWifi() {
 // Reactiva OLED si estaba en ahorro de energía.
 void ui_btn1_click() {
   Serial.println("[UI] BTN1 Click");
-  
-  // En modo WiFi, BTN1 no hace nada (o podría alternar info)
-  if (wifiModeActive) return;
-  
+
   if (!uiCanHandleAction())
     return;
 
@@ -763,6 +741,12 @@ void ui_btn1_click() {
   }
 
   if (displayState == DISP_RTC) {
+    displayState = DISP_NORMAL;
+    renderDisplay();
+    return;
+  }
+
+  if (displayState == DISP_WIFI) {
     displayState = DISP_NORMAL;
     renderDisplay();
     return;
@@ -788,13 +772,7 @@ void ui_btn1_click() {
 // Controla navegación entre niveles y acciones no críticas.
 void ui_btn2_click() {
   Serial.println("[UI] BTN2 Click");
-  
-  // Manejo especial Modo WiFi: Salir y Apagar
-  if (wifiModeActive) {
-     handleConfigWifi(); // Esto llamará a stopWifiApServer
-     return;
-  }
-  
+
   if (displayState == DISP_PROMPT) {
     // Perform Toggle using helper
     toggleSamplingAction();
@@ -826,6 +804,15 @@ void ui_btn2_click() {
      renderDisplay();
      return;
   }
+  if (displayState == DISP_WIFI) {
+      bool wasActive = wifiModeActive;
+      handleConfigWifi(); // toggle ON/OFF
+      showMessage(wasActive ? "WIFI SD: OFF" : "WIFI SD: ON");
+      displayState = DISP_WIFI; // permanecer en la pantalla WIFI
+      renderDisplay();
+      return;
+  }
+
   if (displayState == DISP_NETWORK || displayState == DISP_STORAGE) {
       // Just refresh
       renderDisplay();
@@ -907,11 +894,7 @@ void ui_btn2_click() {
       displayState = DISP_STORAGE;
       displayStateStartTime = millis();
     } else if (menuIndex == 4) { // WIFI SD (ON/OFF)
-      bool wasActive = wifiModeActive;
-      handleConfigWifi();
-      if (wasActive != wifiModeActive) {
-        showMessage(wifiModeActive ? "WIFI SD: ON" : "WIFI SD: OFF");
-      }
+      displayState = DISP_WIFI;
     } else if (menuIndex == 5) { // MODO FULL
       uiFullMode = true;
       displayState = DISP_NORMAL;

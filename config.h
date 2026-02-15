@@ -68,7 +68,8 @@ enum DisplayState {
   DISP_NETWORK,
   DISP_RTC,
   DISP_STORAGE,
-  DISP_GPS
+  DISP_GPS,
+  DISP_WIFI
 };
 #define DISP_MSG_DURATION_MS 1500
 
