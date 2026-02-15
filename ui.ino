@@ -595,6 +595,23 @@ void renderDisplay() {
   }
 
   drawFooterCircles(menus[menuDepth].count, menuIndex);
+
+  // Aviso de Batería Baja (2.0V - 3.0V)
+  // Se dibuja encima de todo (incluido el footer)
+  if (batV > 2.0 && batV < 3.0) {
+    u8g2.setFont(u8g2_font_5x7_tf);
+    const char *lbl = "LOW BAT";
+    int w = u8g2.getStrWidth(lbl);
+
+    // Fondo negro para legibilidad
+    u8g2.setDrawColor(0);
+    u8g2.drawBox(128 - w - 2, 54, w + 2, 10);
+
+    // Texto blanco
+    u8g2.setDrawColor(1);
+    u8g2.drawStr(128 - w - 1, 62, lbl);
+  }
+
   u8g2.sendBuffer();
 }
 
