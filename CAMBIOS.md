@@ -1,5 +1,28 @@
 # Registro de Cambios - FirmwarePro
 
+## [V0.0.35] - 2026-02-14
+### WiFi SD, documentación y control de release
+- Se consolidó versión de firmware a **Pro V0.0.35**.
+- Se implementó flujo de **WiFi SD** con mejoras para uso desde Windows (captive portal DNS).
+- Se creó documentación formal en Markdown:
+  - `README.md`
+  - `MANUAL_USUARIO.md`
+  - `MANUAL_TECNICO.md`
+  - `LICENSE` (CC BY-NC 4.0)
+- Se realizó recuperación/validación de estabilidad tras pruebas (bootloop por SW reset reportado en terreno).
+- **Commit con funcionamiento confirmado en equipo (booteo + flasheo exitoso):**
+  - `6c66dbb` (reaplicación de cambios WiFi exclusivo)
+  - Flasheado exitosamente en COM5 con verificación hash y reset OK.
+
+## [V0.0.33] - 2026-02-14
+### Notas operativas en CSV + menú Mensajes
+- Se agregó nueva columna `notas` al CSV al final del header:
+  - `...,pm100,notas`
+- Se agregó opción **"Otros"** al submenú **Mensajes**.
+- Lógica de nota one-shot:
+  - Al seleccionar `Camion`, `Humo`, `Construccion` u `Otros`, se guarda esa nota en la próxima fila CSV.
+  - Luego se limpia automáticamente para evitar repetición.
+
 ## [V0.0.26] - 2026-02-13
 ### Mejoras en UI y Lógica de Muestreo
 - **Nuevo Prompt de Confirmación:** Se reemplazó el aviso simple por un cuadro de diálogo claro: "¿CONFIRMAR ACCIÓN? INICIAR/DETENER MUESTREO".
