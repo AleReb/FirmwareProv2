@@ -1,6 +1,9 @@
 # Registro de Cambios - HIRI FirmwarePro
 Fecha: 2026-02-15
 
+## Versión Pro V0.1.1
+- **Actualización de versión:** Se incrementó la versión a `Pro V0.1.1` para reflejar los cambios recientes (Modo Offline, Protección SD/Red).
+
 ## Nuevas Funcionalidades Implementadas
 
 ### 1. Modo Sin Internet (Offline Mode)
