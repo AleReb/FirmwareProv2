@@ -22,37 +22,40 @@ extern bool sendAtSync(const String &cmd, String &resp, uint32_t timeout_ms);
 // details)
 static uint8_t pdpReconnectFailCount = 0;
 static uint32_t lastPdpReconnectAttempt = 0;
-const uint8_t MAX_PDP_FAILS_BEFORE_BACKOFF = 5;
-const uint32_t PDP_BACKOFF_MS = 15000;
+const uint8_t MAX_PDP_FAILS_BEFORE_BACKOFF = 10;
+const uint32_t PDP_BACKOFF_MS = 15 * 60 * 1000; // 15 minutos
 const uint32_t PDP_RECONNECT_TIMEOUT_MS = 30000;
 
 // Asegura sesión de datos PDP/NETOPEN activa antes de enviar HTTP.
 // Incluye control de backoff para evitar bucles de reconexión agresivos.
 bool ensurePdpAndNet() {
+  // 1. OFFLINE MODE (Manual Override)
+  // Si el usuario configuró el dispositivo como "Solo Datalogger", no intentamos nada.
+  if (config.offlineMode) {
+    return false;
+  }
+
+  // 2. COOLDOWN / ANTI-BLOQUEO (Automatic Protection)
+  // Si hemos fallado muchas veces (10), esperamos 15 minutos antes de volver a intentar.
+  // Esto evita bloqueos de 30s en bucle cuando no hay cobertura o SIM.
+  if (pdpReconnectFailCount >= MAX_PDP_FAILS_BEFORE_BACKOFF) {
+    uint32_t timeSinceLastAttempt = millis() - lastPdpReconnectAttempt;
+    if (timeSinceLastAttempt < PDP_BACKOFF_MS) {
+      // MODO COOLDOWN: Retornar inmediatamente para proteger SD
+      return false;
+    } else {
+      // Fin del periodo de espera: Permitir un intento
+      Serial.println("[NET] 15 min Cooldown over, retrying connection...");
+      pdpReconnectFailCount = 0; // Resetear para dar una oportunidad
+    }
+  }
+
   String dummy;
   (void)sendAtSync("+CGDCONT=1,\"IP\",\"gigsky-02\"", dummy, 2000);
 
   if (!modem.isGprsConnected()) {
-    // PROTECCIÓN CONTRA BLOQUEOS: Si hemos fallado muchas veces, esperar antes
-    // de reintentar Esto evita bloqueos cuando se viaja entre redes celulares o
-    // en zonas sin cobertura
-    if (pdpReconnectFailCount >= MAX_PDP_FAILS_BEFORE_BACKOFF) {
-      uint32_t timeSinceLastAttempt = millis() - lastPdpReconnectAttempt;
-      if (timeSinceLastAttempt < PDP_BACKOFF_MS) {
-        uint32_t remainingBackoff = PDP_BACKOFF_MS - timeSinceLastAttempt;
-        Serial.printf(
-            "[NET] Too many failures (%d), waiting %lu ms before retry\n",
-            pdpReconnectFailCount, remainingBackoff);
-        return false;
-      } else {
-        // Han pasado 15s, resetear contador y reintentar
-        Serial.println("[NET] Backoff period over, resetting fail counter");
-        pdpReconnectFailCount = 0;
-      }
-    }
-
     Serial.println("[NET] PDP down, reconnecting...");
-    lastPdpReconnectAttempt = millis();
+    lastPdpReconnectAttempt = millis(); // Marca el inicio del intento (o del fallo)
 
     // MINI-LOOP CON WATCHDOG RESET: modem.gprsConnect() puede bloquear 10-60s
     // Alimentamos el watchdog cada 1s para evitar reset del ESP32
@@ -75,6 +78,11 @@ bool ensurePdpAndNet() {
           "[NET] PDP reconnect FAIL after %lu ms (fail count: %d/%d)\n",
           PDP_RECONNECT_TIMEOUT_MS, pdpReconnectFailCount,
           MAX_PDP_FAILS_BEFORE_BACKOFF);
+
+      if (pdpReconnectFailCount >= MAX_PDP_FAILS_BEFORE_BACKOFF) {
+        Serial.println("[NET] Entering 15 min Offline Mode to protect SD logging.");
+      }
+
       hasRed = false;
       return false;
     }
@@ -116,13 +124,19 @@ void parseHttpActionResponse(const String &resp, int &code, int &dataLen) {
 // Ejecuta ciclo HTTP completo (INIT/PARA/ACTION/READ/TERM) con timeout y watchdog.
 // Devuelve true solo para respuestas 2xx y registra errores detallados.
 bool httpGet_webhook(const String &fullUrl) {
+  // Check rápido de Offline Mode antes de imprimir nada
+  if (config.offlineMode) return false;
+
   Serial.printf("[HTTP][SYNC] URL length = %d\n", fullUrl.length());
   if (fullUrl.length() > 512) {
     Serial.println("[HTTP][WARN] URL >512 chars; SIM7600 +HTTPPARA may fail.");
   }
 
   if (!ensurePdpAndNet()) {
-    logError("HTTP_PDP_FAIL", "ensurePdpAndNet", "PDP/NET setup failed");
+    // No loguear error detallado si estamos en cooldown para no saturar SD
+    if (pdpReconnectFailCount < MAX_PDP_FAILS_BEFORE_BACKOFF && !config.offlineMode) {
+       logError("HTTP_PDP_FAIL", "ensurePdpAndNet", "PDP/NET setup failed");
+    }
     return false;
   }
 
@@ -222,4 +236,3 @@ bool httpGet_webhook(const String &fullUrl) {
 
   return (httpCode >= 200 && httpCode < 300);
 }
-

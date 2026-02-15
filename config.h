@@ -57,6 +57,9 @@ struct SystemConfig {
   // GNSS Mode
   uint8_t gnssMode; // Modo GNSS: 1=GPS, 3=GPS+GLO, 5=GPS+BDS, 7=GPS+GLO+BDS,
                     // 15=ALL (default: 15)
+
+  // Offline Mode (Datalogger Only)
+  bool offlineMode; // true: No modem, no HTTP, just SD logging (default: false)
 };
 
 // -------------------- Display State Machine --------------------

@@ -28,6 +28,7 @@
 // #include <TinyGsmClient.h> // Moved to config.h
 #include <U8g2lib.h>
 #include <WebServer.h>
+#include <DNSServer.h> // Added for Captive Portal
 #include <WiFi.h>
 #include <Wire.h>
 #include <esp_task_wdt.h>
@@ -51,7 +52,7 @@ const byte CMD = 0xB4;
 const byte TAIL = 0xAB;
 
 // Firmware version
-String VERSION = "Pro V0.0.35";
+String VERSION = "Pro V0.1.0";
 
 // Global states
 bool rtcOK = false;
@@ -71,6 +72,7 @@ RTC_DS3231 rtc;
 Preferences prefs;
 SPIClass spiSD(HSPI);
 WebServer server(80); // Used in wifi.ino
+DNSServer dnsServer;  // Captive Portal DNS
 
 // PMS
 SoftwareSerial pms(pms_TX, pms_RX);
@@ -320,13 +322,13 @@ extern void ui_btn2_click();
 // Oled Status Helper (used by wifi/main)
 // Renderiza un estado rápido en OLED con hasta 4 líneas de texto.
 // Se usa para feedback de arranque, red, módem y operaciones críticas.
-#line 339 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\FirmwarePro.ino"
+#line 341 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\FirmwarePro.ino"
 void atBegin(const String &cmd, const String &expect1, const String &expect2, uint32_t timeout_ms);
-#line 422 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\FirmwarePro.ino"
+#line 424 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\FirmwarePro.ino"
 void updateNetworkInfo();
-#line 565 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\FirmwarePro.ino"
+#line 567 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\FirmwarePro.ino"
 void setup();
-#line 755 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\FirmwarePro.ino"
+#line 776 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\FirmwarePro.ino"
 void loop();
 #line 42 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\gps.ino"
 void splitSentence(const String &sentence, char delimiter, String fields[], int expectedFields);
@@ -362,9 +364,9 @@ static String safeGpsStr(const String &s);
 static String safeSatsStr(const String &s);
 #line 31 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\http.ino"
 bool ensurePdpAndNet();
-#line 103 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\http.ino"
+#line 111 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\http.ino"
 void parseHttpActionResponse(const String &resp, int &code, int &dataLen);
-#line 118 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\http.ino"
+#line 126 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\http.ino"
 bool httpGet_webhook(const String &fullUrl);
 #line 73 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\pms.ino"
 static uint8_t lerp8(uint8_t a, uint8_t b, float t);
@@ -380,71 +382,73 @@ static bool getModemEpoch(uint32_t &epoch_out);
 void syncRtcSmart();
 #line 50 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\serial_commands.ino"
 void processSerialCommand();
-#line 68 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
+#line 74 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
+void drawWifiModeScreen();
+#line 98 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
 void toggleSamplingAction();
-#line 130 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
+#line 160 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
 void showMessage(const char *msg);
-#line 207 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
+#line 237 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
 static bool uiCanHandleAction();
-#line 223 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
+#line 253 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
 String getClockTime();
-#line 235 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
+#line 265 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
 int calcBatteryPercent(float v);
-#line 245 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
+#line 275 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
 void drawBatteryDynamic(int xPos, int yPos, float v);
-#line 290 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
+#line 320 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
 void drawActivityDot(int x, bool enabled, bool active, bool ok);
-#line 307 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
+#line 337 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
 void drawHeader();
-#line 357 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
+#line 387 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
 void drawFooterCircles(uint8_t cnt, uint8_t sel);
-#line 372 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
+#line 402 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
 void drawSensorValue(uint8_t idx);
-#line 403 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
+#line 433 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
 void drawMenuItemWithIcon(uint8_t depth, uint8_t idx);
-#line 422 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
+#line 452 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
 void drawFullModeView();
-#line 568 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
+#line 603 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
 void drawNetworkInfo();
-#line 593 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
+#line 628 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
 void drawRtcInfo();
-#line 620 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
+#line 655 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
 void drawStorageInfo();
-#line 643 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
+#line 678 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
 void drawGpsInfo();
-#line 664 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
+#line 699 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
 void handleRestart();
-#line 681 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
+#line 716 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
 void handleConfigWifi();
-#line 877 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
+#line 930 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\ui.ino"
 void updateDisplayStateMachine();
-#line 178 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\wifi.ino"
+#line 181 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\wifi.ino"
 static String sanitizeForId(const String &s);
-#line 189 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\wifi.ino"
+#line 192 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\wifi.ino"
 static bool isSafeFilename(const String &name);
-#line 198 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\wifi.ino"
+#line 201 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\wifi.ino"
 static String normalizeSdPath(String name);
-#line 204 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\wifi.ino"
+#line 207 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\wifi.ino"
 static bool ensureWifiAuth();
-#line 210 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\wifi.ino"
+#line 213 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\wifi.ino"
 void listFiles();
-#line 256 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\wifi.ino"
+#line 259 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\wifi.ino"
 void handleFileDownload();
-#line 284 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\wifi.ino"
+#line 287 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\wifi.ino"
 void handleFileDelete();
-#line 302 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\wifi.ino"
+#line 305 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\wifi.ino"
 void handleFileRename();
-#line 323 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\wifi.ino"
+#line 326 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\wifi.ino"
 void handleFileUpload();
-#line 355 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\wifi.ino"
+#line 358 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\wifi.ino"
 void handleDeleteAll();
-#line 391 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\wifi.ino"
+#line 394 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\wifi.ino"
 void handleIp();
-#line 393 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\wifi.ino"
+#line 396 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\wifi.ino"
 void handleSsid();
-#line 395 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\wifi.ino"
+#line 398 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\wifi.ino"
 void setupWifiRoutes();
-#line 321 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\FirmwarePro.ino"
+#line 323 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\FirmwarePro.ino"
 void oledStatus(const String &l1, const String &l2 = "", const String &l3 = "",
                 const String &l4 = "") {
   u8g2.clearBuffer();
@@ -794,15 +798,34 @@ void setup() {
   digitalWrite(MODEM_DTR, LOW);
 
   oledStatus("MODEM", "Starting...");
+
+  // LED heartbeat during modem startup (visual anti-freeze feedback)
+  bool modemBlinkState = false;
+
   for (int i = 0; i < 3; i++) {
     while (!modem.testAT(1000)) {
       Serial.println("[MODEM] Retry...");
+
+      // Blink RGB while retrying modem init
+      modemBlinkState = !modemBlinkState;
+      if (modemBlinkState) {
+        pixels.setPixelColor(0, pixels.Color(0, 0, 80)); // soft blue
+      } else {
+        pixels.setPixelColor(0, pixels.Color(0, 0, 0));
+      }
+      pixels.show();
+
       digitalWrite(MODEM_PWRKEY, HIGH);
       delay(300);
       digitalWrite(MODEM_PWRKEY, LOW);
       delay(1000);
     }
   }
+
+  // Solid blue when modem is ready
+  pixels.setPixelColor(0, pixels.Color(0, 50, 100));
+  pixels.show();
+
   oledStatus("MODEM", "OK");
 
   // Modem setup
@@ -887,8 +910,33 @@ void loop() {
   handleButtonLogic();
 
   if (wifiModeActive) {
+    // Modo WiFi Exclusivo:
+    // 1. Procesa DNS (Portal Cautivo)
+    // 2. Procesa WebServer
+    // 3. Mantiene refresco mínimo de pantalla (para no congelar UI)
+    // 4. Mantiene lectura mínima de GPS si hay FIX (para no perderlo/saturar buffer), pero sin logica pesada.
+    
+    dnsServer.processNextRequest();
     server.handleClient();
-    return;
+    
+    // Mantener GPS vivo (vaciar buffer) si ya teníamos FIX, para no perderlo al salir.
+    // No procesamos la data completa para ahorrar CPU, solo lectura básica si es necesario 
+    // o dejamos que el buffer maneje lo suyo. 
+    // En este caso, simplemente NO lo apagamos. El módulo sigue encendido.
+    // Si queremos mantener el buffer limpio:
+    if (haveFix) {
+       // Opcional: leer y descartar o procesar mínimo. 
+       // Por ahora, confiamos en que el módulo sigue con energía.
+       // Solo llamamos al watchdog del GNSS para que no crea que se colgó si implementamos timeout.
+       gnssWatchdog(); 
+    }
+
+    static uint32_t lastWifiDisp = 0;
+    if (millis() - lastWifiDisp > 500) {
+       lastWifiDisp = millis();
+       renderDisplay();
+    }
+    return; 
   }
 
   // Sensors & GNSS
@@ -1059,6 +1107,9 @@ void loadConfig() {
   // GNSS Mode
   config.gnssMode = prefs.getUChar("gnssMode", 15);
 
+  // Offline Mode
+  config.offlineMode = prefs.getBool("offline", false);
+
   prefs.end();
 
   Serial.println("[CONFIG] Loaded from flash");
@@ -1075,6 +1126,7 @@ void loadConfig() {
                 config.autostartWaitGps ? "YES" : "NO",
                 config.autostartGpsTimeout);
   Serial.printf("[CONFIG] GNSS mode: %u\n", config.gnssMode);
+  Serial.printf("[CONFIG] Offline Mode: %s\n", config.offlineMode ? "ON" : "OFF");
 }
 
 // -------------------- Save Configuration --------------------
@@ -1105,6 +1157,9 @@ void saveConfig() {
   // GNSS Mode
   prefs.putUChar("gnssMode", config.gnssMode);
 
+  // Offline Mode
+  prefs.putBool("offline", config.offlineMode);
+
   prefs.end();
 
   Serial.println("[CONFIG] Saved to flash");
@@ -1129,6 +1184,8 @@ void configSetDefaults() {
   config.autostartGpsTimeout = 600; // 10 minutos (default)
 
   config.gnssMode = 15; // Todas las constelaciones (default)
+
+  config.offlineMode = false; // Default: Online (with modem)
 
   Serial.println("[CONFIG] Reset to defaults");
 }
@@ -1187,6 +1244,9 @@ void printConfig() {
     Serial.println("(Unknown)");
     break;
   }
+
+  Serial.println("\n[Offline Mode]");
+  Serial.printf("  Offline Mode:       %s\n", config.offlineMode ? "ON" : "OFF");
 
   Serial.println();
 }
@@ -1757,6 +1817,12 @@ void gnssDebugPollAsync() {
 // Detecta soporte XTRA (A-GNSS) y lo habilita en el módem.
 // Mejora tiempo de primer fix cuando la red lo permite.
 bool detectAndEnableXtra() {
+  // Offline Mode: XTRA requiere internet, así que lo desactivamos
+  if (config.offlineMode) {
+    Serial.println("[XTRA] Disabled by Offline Mode");
+    return false;
+  }
+
   String r;
   if (!sendAtSync("+CGPSXE=?", r, 2000)) {
     Serial.println("[XTRA] Not supported");
@@ -1773,29 +1839,23 @@ bool detectAndEnableXtra() {
 // Descarga paquete XTRA una vez, asegurando PDP activo.
 // Guarda estado para trazabilidad y decisiones futuras.
 bool downloadXtraOnce() {
+  // Offline Mode: No intentar descargas
+  if (config.offlineMode) return false;
+
+  // CAMBIO IMPORTANTE: No bloquear intentando conectar GPRS si no hay red.
+  // XTRA es una optimización, no una función crítica. Si no hay red, abortamos.
   if (!modem.isGprsConnected()) {
-    if (!modem.gprsConnect(apn, gprsUser, gprsPass)) {
-      Serial.println("[XTRA] PDP reconnect FAIL");
-      return false;
-    }
+    Serial.println("[XTRA] Skipped (No active PDP context)");
+    return false;
   }
+
+  // Si hay red, procedemos (esto sí puede tomar tiempo, pero es seguro)
   String r;
   (void)sendAtSync("+CGPSXD=?", r, 2000);
-  bool ok = sendAtSync("+CGPSXD=1", r, 120000);
+  bool ok = sendAtSync("+CGPSXD=1", r, 120000); // 2 min timeout (bloqueante si la red es lenta)
   Serial.println(ok ? "[XTRA] Download OK" : "[XTRA] Download FAIL");
   xtraLastOk = ok;
   return ok;
-}
-
-// Refresca XTRA de forma periódica según ventana configurada.
-// Evita descargas innecesarias y conserva recursos de red.
-void downloadXtraIfDue() {
-  if (!xtraSupported)
-    return;
-  if (millis() - lastXtraDownload < XTRA_REFRESH_MS)
-    return;
-  if (downloadXtraOnce())
-    lastXtraDownload = millis();
 }
 
 #line 1 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\helpers.ino"
@@ -1946,37 +2006,40 @@ extern bool sendAtSync(const String &cmd, String &resp, uint32_t timeout_ms);
 // details)
 static uint8_t pdpReconnectFailCount = 0;
 static uint32_t lastPdpReconnectAttempt = 0;
-const uint8_t MAX_PDP_FAILS_BEFORE_BACKOFF = 5;
-const uint32_t PDP_BACKOFF_MS = 15000;
+const uint8_t MAX_PDP_FAILS_BEFORE_BACKOFF = 10;
+const uint32_t PDP_BACKOFF_MS = 15 * 60 * 1000; // 15 minutos
 const uint32_t PDP_RECONNECT_TIMEOUT_MS = 30000;
 
 // Asegura sesión de datos PDP/NETOPEN activa antes de enviar HTTP.
 // Incluye control de backoff para evitar bucles de reconexión agresivos.
 bool ensurePdpAndNet() {
+  // 1. OFFLINE MODE (Manual Override)
+  // Si el usuario configuró el dispositivo como "Solo Datalogger", no intentamos nada.
+  if (config.offlineMode) {
+    return false;
+  }
+
+  // 2. COOLDOWN / ANTI-BLOQUEO (Automatic Protection)
+  // Si hemos fallado muchas veces (10), esperamos 15 minutos antes de volver a intentar.
+  // Esto evita bloqueos de 30s en bucle cuando no hay cobertura o SIM.
+  if (pdpReconnectFailCount >= MAX_PDP_FAILS_BEFORE_BACKOFF) {
+    uint32_t timeSinceLastAttempt = millis() - lastPdpReconnectAttempt;
+    if (timeSinceLastAttempt < PDP_BACKOFF_MS) {
+      // MODO COOLDOWN: Retornar inmediatamente para proteger SD
+      return false;
+    } else {
+      // Fin del periodo de espera: Permitir un intento
+      Serial.println("[NET] 15 min Cooldown over, retrying connection...");
+      pdpReconnectFailCount = 0; // Resetear para dar una oportunidad
+    }
+  }
+
   String dummy;
   (void)sendAtSync("+CGDCONT=1,\"IP\",\"gigsky-02\"", dummy, 2000);
 
   if (!modem.isGprsConnected()) {
-    // PROTECCIÓN CONTRA BLOQUEOS: Si hemos fallado muchas veces, esperar antes
-    // de reintentar Esto evita bloqueos cuando se viaja entre redes celulares o
-    // en zonas sin cobertura
-    if (pdpReconnectFailCount >= MAX_PDP_FAILS_BEFORE_BACKOFF) {
-      uint32_t timeSinceLastAttempt = millis() - lastPdpReconnectAttempt;
-      if (timeSinceLastAttempt < PDP_BACKOFF_MS) {
-        uint32_t remainingBackoff = PDP_BACKOFF_MS - timeSinceLastAttempt;
-        Serial.printf(
-            "[NET] Too many failures (%d), waiting %lu ms before retry\n",
-            pdpReconnectFailCount, remainingBackoff);
-        return false;
-      } else {
-        // Han pasado 15s, resetear contador y reintentar
-        Serial.println("[NET] Backoff period over, resetting fail counter");
-        pdpReconnectFailCount = 0;
-      }
-    }
-
     Serial.println("[NET] PDP down, reconnecting...");
-    lastPdpReconnectAttempt = millis();
+    lastPdpReconnectAttempt = millis(); // Marca el inicio del intento (o del fallo)
 
     // MINI-LOOP CON WATCHDOG RESET: modem.gprsConnect() puede bloquear 10-60s
     // Alimentamos el watchdog cada 1s para evitar reset del ESP32
@@ -1999,6 +2062,11 @@ bool ensurePdpAndNet() {
           "[NET] PDP reconnect FAIL after %lu ms (fail count: %d/%d)\n",
           PDP_RECONNECT_TIMEOUT_MS, pdpReconnectFailCount,
           MAX_PDP_FAILS_BEFORE_BACKOFF);
+
+      if (pdpReconnectFailCount >= MAX_PDP_FAILS_BEFORE_BACKOFF) {
+        Serial.println("[NET] Entering 15 min Offline Mode to protect SD logging.");
+      }
+
       hasRed = false;
       return false;
     }
@@ -2040,13 +2108,19 @@ void parseHttpActionResponse(const String &resp, int &code, int &dataLen) {
 // Ejecuta ciclo HTTP completo (INIT/PARA/ACTION/READ/TERM) con timeout y watchdog.
 // Devuelve true solo para respuestas 2xx y registra errores detallados.
 bool httpGet_webhook(const String &fullUrl) {
+  // Check rápido de Offline Mode antes de imprimir nada
+  if (config.offlineMode) return false;
+
   Serial.printf("[HTTP][SYNC] URL length = %d\n", fullUrl.length());
   if (fullUrl.length() > 512) {
     Serial.println("[HTTP][WARN] URL >512 chars; SIM7600 +HTTPPARA may fail.");
   }
 
   if (!ensurePdpAndNet()) {
-    logError("HTTP_PDP_FAIL", "ensurePdpAndNet", "PDP/NET setup failed");
+    // No loguear error detallado si estamos en cooldown para no saturar SD
+    if (pdpReconnectFailCount < MAX_PDP_FAILS_BEFORE_BACKOFF && !config.offlineMode) {
+       logError("HTTP_PDP_FAIL", "ensurePdpAndNet", "PDP/NET setup failed");
+    }
     return false;
   }
 
@@ -2146,7 +2220,6 @@ bool httpGet_webhook(const String &fullUrl) {
 
   return (httpCode >= 200 && httpCode < 300);
 }
-
 
 #line 1 "C:\\gitshubs\\HIRIPROBASE01\\FirmwarePro\\pms.ino"
 // -------------------- PMS non-blocking parser (now with T/RH)
@@ -3272,6 +3345,36 @@ extern String currentNote;
 
 // -------------------- Helper Logic --------------------
 
+extern String apIpStr;
+extern String AP_SSID_STR;
+extern const char *AP_PASSWORD;
+
+// --- Helper Logic ---
+
+// Pantalla dedicada de control WiFi (estilo RTC)
+void drawWifiModeScreen() {
+  u8g2.clearBuffer();
+  drawHeader();
+  u8g2.setFont(u8g2_font_6x10_tf);
+
+  u8g2.drawStr(0, 20, "WIFI SD:");
+  u8g2.drawStr(50, 20, wifiModeActive ? "ACTIVO" : "INACTIVO");
+
+  u8g2.setFont(u8g2_font_5x7_tf);
+  u8g2.drawStr(0, 31, ("SSID: " + AP_SSID_STR).c_str());
+  u8g2.drawStr(0, 40, ("PASS: " + String(AP_PASSWORD)).c_str());
+
+  String ip = wifiModeActive ? apIpStr : String("0.0.0.0");
+  u8g2.drawStr(0, 49, ("IP: " + ip).c_str());
+
+  u8g2.drawFrame(0, 50, 128, 14);
+  u8g2.setFont(u8g2_font_5x7_tf);
+  u8g2.drawStr(2, 60, wifiModeActive ? "B1:---" : "B1:EXIT");
+  u8g2.drawStr(52, 60, wifiModeActive ? "B2:OFF" : "B2:ON");
+
+  u8g2.sendBuffer();
+}
+
 // Centralized Toggle Logic for Starting/Stopping Sampling
 void toggleSamplingAction() {
   if (streaming) {
@@ -3544,12 +3647,12 @@ void drawHeader() {
   bool networkError = (csq == 99);
   if (networkError) {
     u8g2.setFont(u8g2_font_open_iconic_all_1x_t);
-    u8g2.drawGlyph(82, 9, 0x0118);
+    u8g2.drawGlyph(84, 9, 0x0118);
   } else {
     u8g2.setFont(u8g2_font_open_iconic_all_1x_t);
-    u8g2.drawGlyph(82, 9, 0x00FD);
+    u8g2.drawGlyph(84, 9, 0x00FD);
     u8g2.setFont(u8g2_font_5x7_tf);
-    u8g2.setCursor(90, 9);
+    u8g2.setCursor(92, 9);
     String csqStr = String(csq);
     if (csqStr.length() > 2)
       csqStr = csqStr.substring(0, 2);
@@ -3689,7 +3792,7 @@ void renderDisplay() {
   if (displayState == DISP_PROMPT) {
     u8g2.drawFrame(0, 12, 128, 52);
     u8g2.setFont(u8g2_font_6x12_tf);
-    const char* l1 = "¿CONFIRMAR ACCION?";
+    const char* l1 = "CONFIRMAR ACCION?";
     const char* l2 = streaming ? "DETENER MUESTREO" : "INICIAR MUESTREO";
     u8g2.drawStr((128 - u8g2.getStrWidth(l1)) / 2, 28, l1);
     u8g2.drawStr((128 - u8g2.getStrWidth(l2)) / 2, 42, l2);
@@ -3731,6 +3834,11 @@ void renderDisplay() {
       return;
     }
     drawGpsInfo();
+    return;
+  }
+
+  if (displayState == DISP_WIFI) {
+    drawWifiModeScreen();
     return;
   }
 
@@ -3902,6 +4010,7 @@ void handleConfigWifi() {
 // Reactiva OLED si estaba en ahorro de energía.
 void ui_btn1_click() {
   Serial.println("[UI] BTN1 Click");
+
   if (!uiCanHandleAction())
     return;
 
@@ -3914,6 +4023,17 @@ void ui_btn1_click() {
 
   if (displayState == DISP_RTC) {
     displayState = DISP_NORMAL;
+    renderDisplay();
+    return;
+  }
+
+  if (displayState == DISP_WIFI) {
+    // Regla solicitada:
+    // - Si WiFi está ACTIVO: BTN1 no hace nada (bloqueado)
+    // - Si WiFi está INACTIVO: BTN1 permite salir
+    if (!wifiModeActive) {
+      displayState = DISP_NORMAL;
+    }
     renderDisplay();
     return;
   }
@@ -3938,6 +4058,7 @@ void ui_btn1_click() {
 // Controla navegación entre niveles y acciones no críticas.
 void ui_btn2_click() {
   Serial.println("[UI] BTN2 Click");
+
   if (displayState == DISP_PROMPT) {
     // Perform Toggle using helper
     toggleSamplingAction();
@@ -3969,6 +4090,15 @@ void ui_btn2_click() {
      renderDisplay();
      return;
   }
+  if (displayState == DISP_WIFI) {
+      bool wasActive = wifiModeActive;
+      handleConfigWifi(); // toggle ON/OFF
+      showMessage(wasActive ? "WIFI SD: OFF" : "WIFI SD: ON");
+      displayState = DISP_WIFI; // permanecer en la pantalla WIFI
+      renderDisplay();
+      return;
+  }
+
   if (displayState == DISP_NETWORK || displayState == DISP_STORAGE) {
       // Just refresh
       renderDisplay();
@@ -4050,11 +4180,7 @@ void ui_btn2_click() {
       displayState = DISP_STORAGE;
       displayStateStartTime = millis();
     } else if (menuIndex == 4) { // WIFI SD (ON/OFF)
-      bool wasActive = wifiModeActive;
-      handleConfigWifi();
-      if (wasActive != wifiModeActive) {
-        showMessage(wifiModeActive ? "WIFI SD: ON" : "WIFI SD: OFF");
-      }
+      displayState = DISP_WIFI;
     } else if (menuIndex == 5) { // MODO FULL
       uiFullMode = true;
       displayState = DISP_NORMAL;
@@ -4263,6 +4389,9 @@ const char *footerHtml = R"rawliteral(
 )rawliteral";
 
 #include <ctype.h>
+#include <DNSServer.h>
+
+extern DNSServer dnsServer;
 
 // Replace non-alphanumeric chars by '_' (safe for HTML element ids)
 static String sanitizeForId(const String &s) {
@@ -4540,6 +4669,9 @@ void startWifiApServer() {
     return;
   }
 
+  // Iniciar DNS Server para Portal Cautivo (Redirige todo a nuestra IP)
+  dnsServer.start(53, "*", WiFi.softAPIP());
+
   setupWifiRoutes();
   server.begin();
   wifiModeActive = true;
@@ -4550,17 +4682,16 @@ void startWifiApServer() {
   Serial.println(AP_SSID_STR);
   Serial.print("[WiFi] AP IP: ");
   Serial.println(ip);
-
-  oledStatus("WIFI MODE", "SSID: " + AP_SSID_STR,
-             "PASS: " + String(AP_PASSWORD), "IP: " + ip.toString());
+  
+  // No llamamos oledStatus aqui porque ui.ino manejará la pantalla dedicada
 }
 
 void stopWifiApServer() {
+  dnsServer.stop();
   server.stop();
   WiFi.softAPdisconnect(true);
   WiFi.mode(WIFI_OFF);
   wifiModeActive = false;
   Serial.println("[WiFi] AP stopped");
-  // (opcional) refrescar OLED con tu UI normal al siguiente ciclo
 }
 

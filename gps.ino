@@ -444,6 +444,12 @@ void gnssDebugPollAsync() {
 // Detecta soporte XTRA (A-GNSS) y lo habilita en el módem.
 // Mejora tiempo de primer fix cuando la red lo permite.
 bool detectAndEnableXtra() {
+  // Offline Mode: XTRA requiere internet, así que lo desactivamos
+  if (config.offlineMode) {
+    Serial.println("[XTRA] Disabled by Offline Mode");
+    return false;
+  }
+
   String r;
   if (!sendAtSync("+CGPSXE=?", r, 2000)) {
     Serial.println("[XTRA] Not supported");
@@ -460,27 +466,21 @@ bool detectAndEnableXtra() {
 // Descarga paquete XTRA una vez, asegurando PDP activo.
 // Guarda estado para trazabilidad y decisiones futuras.
 bool downloadXtraOnce() {
+  // Offline Mode: No intentar descargas
+  if (config.offlineMode) return false;
+
+  // CAMBIO IMPORTANTE: No bloquear intentando conectar GPRS si no hay red.
+  // XTRA es una optimización, no una función crítica. Si no hay red, abortamos.
   if (!modem.isGprsConnected()) {
-    if (!modem.gprsConnect(apn, gprsUser, gprsPass)) {
-      Serial.println("[XTRA] PDP reconnect FAIL");
-      return false;
-    }
+    Serial.println("[XTRA] Skipped (No active PDP context)");
+    return false;
   }
+
+  // Si hay red, procedemos (esto sí puede tomar tiempo, pero es seguro)
   String r;
   (void)sendAtSync("+CGPSXD=?", r, 2000);
-  bool ok = sendAtSync("+CGPSXD=1", r, 120000);
+  bool ok = sendAtSync("+CGPSXD=1", r, 120000); // 2 min timeout (bloqueante si la red es lenta)
   Serial.println(ok ? "[XTRA] Download OK" : "[XTRA] Download FAIL");
   xtraLastOk = ok;
   return ok;
-}
-
-// Refresca XTRA de forma periódica según ventana configurada.
-// Evita descargas innecesarias y conserva recursos de red.
-void downloadXtraIfDue() {
-  if (!xtraSupported)
-    return;
-  if (millis() - lastXtraDownload < XTRA_REFRESH_MS)
-    return;
-  if (downloadXtraOnce())
-    lastXtraDownload = millis();
 }

@@ -32,6 +32,9 @@ void loadConfig() {
   // GNSS Mode
   config.gnssMode = prefs.getUChar("gnssMode", 15);
 
+  // Offline Mode
+  config.offlineMode = prefs.getBool("offline", false);
+
   prefs.end();
 
   Serial.println("[CONFIG] Loaded from flash");
@@ -48,6 +51,7 @@ void loadConfig() {
                 config.autostartWaitGps ? "YES" : "NO",
                 config.autostartGpsTimeout);
   Serial.printf("[CONFIG] GNSS mode: %u\n", config.gnssMode);
+  Serial.printf("[CONFIG] Offline Mode: %s\n", config.offlineMode ? "ON" : "OFF");
 }
 
 // -------------------- Save Configuration --------------------
@@ -78,6 +82,9 @@ void saveConfig() {
   // GNSS Mode
   prefs.putUChar("gnssMode", config.gnssMode);
 
+  // Offline Mode
+  prefs.putBool("offline", config.offlineMode);
+
   prefs.end();
 
   Serial.println("[CONFIG] Saved to flash");
@@ -102,6 +109,8 @@ void configSetDefaults() {
   config.autostartGpsTimeout = 600; // 10 minutos (default)
 
   config.gnssMode = 15; // Todas las constelaciones (default)
+
+  config.offlineMode = false; // Default: Online (with modem)
 
   Serial.println("[CONFIG] Reset to defaults");
 }
@@ -160,6 +169,9 @@ void printConfig() {
     Serial.println("(Unknown)");
     break;
   }
+
+  Serial.println("\n[Offline Mode]");
+  Serial.printf("  Offline Mode:       %s\n", config.offlineMode ? "ON" : "OFF");
 
   Serial.println();
 }

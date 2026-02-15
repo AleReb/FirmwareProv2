@@ -218,6 +218,8 @@ C:\gitshubs\HIRIPROBASE01\FirmwarePro\build\sketch\FirmwarePro.ino.cpp.o: \
  C:\Users\Ale\AppData\Local\Arduino15\packages\esp32\hardware\esp32\2.0.17/tools/sdk/esp32/include/nghttp/port/include/http_parser.h \
  C:\Users\Ale\AppData\Local\Arduino15\packages\esp32\hardware\esp32\2.0.17\libraries\WebServer\src/Uri.h \
  C:\Users\Ale\AppData\Local\Arduino15\packages\esp32\hardware\esp32\2.0.17\libraries\WebServer\src/detail/RequestHandler.h \
+ C:\Users\Ale\AppData\Local\Arduino15\packages\esp32\hardware\esp32\2.0.17\libraries\DNSServer\src/DNSServer.h \
+ C:\Users\Ale\AppData\Local\Arduino15\packages\esp32\hardware\esp32\2.0.17\libraries\WiFi\src/WiFiUdp.h \
  C:\Users\Ale\AppData\Local\Arduino15\packages\esp32\hardware\esp32\2.0.17/tools/sdk/esp32/include/esp_system/include/esp_task_wdt.h \
  C:\gitshubs\HIRIPROBASE01\FirmwarePro\build\sketch\config.h \
  C:\Users\Ale\Documents\Arduino\libraries\Adafruit_NeoPixel/Adafruit_NeoPixel.h \

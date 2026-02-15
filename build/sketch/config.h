@@ -58,6 +58,9 @@ struct SystemConfig {
   // GNSS Mode
   uint8_t gnssMode; // Modo GNSS: 1=GPS, 3=GPS+GLO, 5=GPS+BDS, 7=GPS+GLO+BDS,
                     // 15=ALL (default: 15)
+
+  // Offline Mode (Datalogger Only)
+  bool offlineMode; // true: No modem, no HTTP, just SD logging (default: false)
 };
 
 // -------------------- Display State Machine --------------------
@@ -69,7 +72,8 @@ enum DisplayState {
   DISP_NETWORK,
   DISP_RTC,
   DISP_STORAGE,
-  DISP_GPS
+  DISP_GPS,
+  DISP_WIFI
 };
 #define DISP_MSG_DURATION_MS 1500
 
